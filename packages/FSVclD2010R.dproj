@@ -45,14 +45,14 @@
 			</DelphiCompile>
 			<DCCReference Include="rtl.dcp"/>
 			<DCCReference Include="vcl.dcp"/>
-			<DCCReference Include="..\vcl\FSGraphics.pas"/>
-			<DCCReference Include="..\vcl\FSStdCtrls.pas"/>
-			<DCCReference Include="..\vcl\FSTheme.pas"/>
-			<DCCReference Include="..\vcl\FSTrayIcon.pas"/>
-			<DCCReference Include="..\vcl\FSVclBase.pas"/>
-			<DCCReference Include="..\vcl\FSScrollControls.pas"/>
-			<DCCReference Include="..\vcl\FSNavTree.pas"/>
-			<DCCReference Include="..\vcl\FsControls.pas"/>
+			<DCCReference Include="..\src\FsControls.pas"/>
+			<DCCReference Include="..\src\FSGraphics.pas"/>
+			<DCCReference Include="..\src\FSNavTree.pas"/>
+			<DCCReference Include="..\src\FSScrollControls.pas"/>
+			<DCCReference Include="..\src\FSStdCtrls.pas"/>
+			<DCCReference Include="..\src\FSTheme.pas"/>
+			<DCCReference Include="..\src\FSTrayIcon.pas"/>
+			<DCCReference Include="..\src\FSVclBase.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

@@ -12,7 +12,7 @@ implementation
 
 procedure Register;
 begin
-  RegisterComponents('FastSimpleVcl', [TFsTheme, TFsRectangle, TFsNinePitchDrawable, TFsPictureDrawable,
+  RegisterComponents('FSVCL', [TFsTheme, TFsRectangle, TFsNinePitchDrawable, TFsPictureDrawable,
     TFsImage, TFsImageButton, TFsCoverButton, TFsSkinButton, TFsCheckBox,
     TFsPanel, TFsPageControl, TFsEdit, TFsButtonEdit, TFsFlatScrollBar,
     TFsMemo, TFsListBox, TFsListView, TFsTreeView, TFsNavTree]);

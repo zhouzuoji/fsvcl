@@ -31,6 +31,6 @@ requires
   FSVclD2010R;
 
 contains
-  FSVclRegister in '..\vcl\FSVclRegister.pas';
+  FSVclRegister in '..\src\FSVclRegister.pas';
 
 end.

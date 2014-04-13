@@ -45,7 +45,7 @@
 			<DCCReference Include="rtl.dcp"/>
 			<DCCReference Include="designide.dcp"/>
 			<DCCReference Include="FSVclD2010R.dcp"/>
-			<DCCReference Include="..\vcl\FSVclRegister.pas"/>
+			<DCCReference Include="..\src\FSVclRegister.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
