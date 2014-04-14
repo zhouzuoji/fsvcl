@@ -28,9 +28,13 @@ package FSVclD2007Dsg;
 requires
   rtl,
   designide,
-  FSVclD2007R;
+  FSVclD2007R,
+  xmlrtl,
+  vclactnband,
+  vclx,
+  vcl;
 
 contains
-  FSVclRegister in '..\vcl\FSVclRegister.pas';
+  FSVclRegister in '..\src\FSVclRegister.pas';
 
 end.

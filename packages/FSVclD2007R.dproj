@@ -32,16 +32,20 @@
     <DelphiCompile Include="FSVclD2007R.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="..\vcl\FsControls.pas" />
-    <DCCReference Include="..\vcl\FSGraphics.pas" />
-    <DCCReference Include="..\vcl\FSNavTree.pas" />
-    <DCCReference Include="..\vcl\FSScrollControls.pas" />
-    <DCCReference Include="..\vcl\FSStdCtrls.pas" />
-    <DCCReference Include="..\vcl\FSTheme.pas" />
-    <DCCReference Include="..\vcl\FSTrayIcon.pas" />
-    <DCCReference Include="..\vcl\FSVclBase.pas" />
+    <DCCReference Include="..\src\FsControls.pas" />
+    <DCCReference Include="..\src\FSGraphics.pas" />
+    <DCCReference Include="..\src\FSNavTree.pas" />
+    <DCCReference Include="..\src\FSScrollControls.pas" />
+    <DCCReference Include="..\src\FSStdCtrls.pas" />
+    <DCCReference Include="..\src\FSTheme.pas" />
+    <DCCReference Include="..\src\FSTrayIcon.pas" />
+    <DCCReference Include="..\src\FSVclBase.pas" />
+    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\designide.dcp" />
     <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\FSBase.dcp" />
     <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\rtl.dcp" />
     <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\vcl.dcp" />
+    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\vclactnband.dcp" />
+    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\vclx.dcp" />
+    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\xmlrtl.dcp" />
   </ItemGroup>
 </Project>

@@ -28,16 +28,20 @@ package FSVclD2007R;
 requires
   rtl,
   vcl,
-  FSBase;
+  FSBase,
+  designide,
+  xmlrtl,
+  vclactnband,
+  vclx;
 
 contains
-  FSGraphics in '..\vcl\FSGraphics.pas',
-  FSStdCtrls in '..\vcl\FSStdCtrls.pas',
-  FSTheme in '..\vcl\FSTheme.pas',
-  FSTrayIcon in '..\vcl\FSTrayIcon.pas',
-  FSVclBase in '..\vcl\FSVclBase.pas',
-  FSScrollControls in '..\vcl\FSScrollControls.pas',
-  FSNavTree in '..\vcl\FSNavTree.pas',
-  FsControls in '..\vcl\FsControls.pas';
+  FsControls in '..\src\FsControls.pas',
+  FSGraphics in '..\src\FSGraphics.pas',
+  FSNavTree in '..\src\FSNavTree.pas',
+  FSScrollControls in '..\src\FSScrollControls.pas',
+  FSStdCtrls in '..\src\FSStdCtrls.pas',
+  FSTheme in '..\src\FSTheme.pas',
+  FSTrayIcon in '..\src\FSTrayIcon.pas',
+  FSVclBase in '..\src\FSVclBase.pas';
 
 end.
