@@ -128,14 +128,20 @@ type
     procedure SetScrollRange(IsVert: Boolean; nMin, nMax, nPage: Integer);
     procedure SetScrollPos(IsVert: Boolean; nPos: Integer);
     function HitTest(X, Y: Integer): TScrollHitTest;
+    procedure GetClientRectNoScroll(var rc: TRect);
     procedure RecalcNC;
     property ParentBackground;
     property ParentCtl3D;
   end;
 
+function NeedScroll(const si: TScrollInfo): Boolean; inline;
+
 function GetDefaultScrollBar: TFsCustomScrollBar;
 
 implementation
+
+var
+  ThumbTrackPos: Integer;
 
 type
   TScrollBarTimer = class(TTimer)
@@ -694,10 +700,17 @@ end;
 
 procedure TFsCustomControl.DragThumb(BarFlag, ScrollCode, nTrackPos: Integer);
 begin
+  ThumbTrackPos := nTrackPos;
+  
   if BarFlag = SB_VERT then
     Self.DoScroll(WM_VSCROLL, MakeLong(ScrollCode, nTrackPos), 0)
   else
     Self.DoScroll(WM_HSCROLL, MakeLong(ScrollCode, nTrackPos), 0);
+end;
+
+procedure TFsCustomControl.GetClientRectNoScroll(var rc: TRect);
+begin
+  Self.ClipEdge(rc);
 end;
 
 function TFsCustomControl.GetControlScrollInfo(var si: TScrollInfo; isVert: Boolean): Boolean;
@@ -980,19 +993,19 @@ const
   Ctl3DStyles: array[Boolean] of Integer = (BF_MONO, 0);
 var
   sb: TFsCustomScrollBar;
-  r, rc: TRect;
+  rc: TRect;
   fsi: TFsScrollInfo;
   vsi, hsi: TScrollInfo;
 begin
-  Windows.GetClientRect(Handle, r);
+  Windows.GetClientRect(Handle, rc);
 
   if BevelKind <> bkNone then
-    Windows.DrawEdge(Canvas.Handle, r, InnerStyles[BevelInner] or OuterStyles[BevelOuter],
+    Windows.DrawEdge(Canvas.Handle, rc, InnerStyles[BevelInner] or OuterStyles[BevelOuter],
       Byte(BevelEdges) or EdgeStyles[BevelKind] or Ctl3DStyles[Ctl3D] or BF_ADJUST);
 
   sb := GetRealScrollBar;
 
-  Self.GetScrollInfo(fsi, vsi, hsi, r);
+  Self.GetScrollInfo(fsi, vsi, hsi, rc);
 
   if fsi.ShowVScroll then
   begin
@@ -1171,7 +1184,44 @@ begin
 end;
 
 procedure TFsCustomControl.WMNCCalcSize(var msgr: TWMNCCalcSize);
+var
+  cxEdge, cyEdge: Integer;
+  r: PRect;
+  sb: TFsCustomScrollBar;
+  fv, fh: Boolean;
 begin
+  r := @msgr.CalcSize_Params.rgrc[0];
+
+  if BevelKind <> bkNone then
+  begin
+    cxEdge := GetSystemMetrics(SM_CXEDGE) shr 1;
+    cyEdge := GetSystemMetrics(SM_CYEDGE) shr 1;
+
+    if BevelInner <> bvNone then
+    begin
+      if beLeft in BevelEdges then Inc(r.Left, cxEdge);
+      if beTop in BevelEdges then Inc(r.Top, cyEdge);
+      if beRight in BevelEdges then Dec(r.Right, cxEdge);
+      if beBottom in BevelEdges then Dec(r.Bottom, cyEdge);
+    end;
+
+    if BevelOuter <> bvNone then
+    begin
+      if beLeft in BevelEdges then Inc(r.Left, cxEdge);
+      if beTop in BevelEdges then Inc(r.Top, cyEdge);
+      if beRight in BevelEdges then Dec(r.Right, cxEdge);
+      if beBottom in BevelEdges then Dec(r.Bottom, cyEdge);
+    end;
+  end;
+
+  sb := Self.GetRealScrollBar;
+
+  fv := Self.NeedScrollBar(fh);
+
+  if fv then Dec(r.Right, sb.VScrollWidth);
+
+  if fh then Dec(r.Bottom, sb.HScrollHeight);
+
   msgr.Result := 0;
 end;
 
