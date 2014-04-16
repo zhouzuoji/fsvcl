@@ -92,7 +92,7 @@ type
     function GetRealScrollBar: TFsCustomScrollBar;
     function NeedScrollBar(out HScroll: Boolean): Boolean;
     procedure GetScrollInfo(var fsi: TFsScrollInfo; var vsi, hsi: TScrollInfo; const r: TRect);
-    function HitTest(X, Y: Integer): TScrollHitTest;
+    function ScrollHitTest(X, Y: Integer): TScrollHitTest;
     procedure NCChanged;
     procedure ClipEdge(var r: TRect);
     procedure CheckScrollBarCapture(X, Y: Integer);
@@ -173,14 +173,14 @@ begin
           DoScroll(WM_HSCROLL, SB_PAGELEFT, 0);
           GetCursorPos(pt);
           Windows.ScreenToClient(Handle, pt);
-          if HitTest(pt.X, pt.Y) <> shtPageLeft then Self.Enabled := False;
+          if ScrollHitTest(pt.X, pt.Y) <> shtPageLeft then Self.Enabled := False;
         end;
       shtPageRight:
         begin
           DoScroll(WM_HSCROLL, SB_PAGERIGHT, 0);
           GetCursorPos(pt);
           Windows.ScreenToClient(Handle, pt);
-          if HitTest(pt.X, pt.Y) <> shtPageLeft then Self.Enabled := False;
+          if ScrollHitTest(pt.X, pt.Y) <> shtPageLeft then Self.Enabled := False;
         end;
       shtTopArrow: DoScroll(WM_VSCROLL, SB_LINEUP, 0);
       shtBottomArrow: DoScroll(WM_VSCROLL, SB_LINEDOWN, 0);
@@ -189,14 +189,14 @@ begin
           DoScroll(WM_VSCROLL, SB_PAGEUP, 0);
           GetCursorPos(pt);
           Windows.ScreenToClient(Handle, pt);
-          if HitTest(pt.X, pt.Y) <> shtPageUp then Self.Enabled := False;
+          if ScrollHitTest(pt.X, pt.Y) <> shtPageUp then Self.Enabled := False;
         end;
       shtPageDown:
         begin
           DoScroll(WM_VSCROLL, SB_PAGEDOWN, 0);
           GetCursorPos(pt);
           Windows.ScreenToClient(Handle, pt);
-          if HitTest(pt.X, pt.Y) <> shtPageDown then Self.Enabled := False;
+          if ScrollHitTest(pt.X, pt.Y) <> shtPageDown then Self.Enabled := False;
         end;
     end;
   end;
@@ -636,7 +636,7 @@ begin
       begin
         GetCursorPos(pt);
         Windows.ScreenToClient(Handle, pt);
-        GetScrollBarTimer.Enabled := HitTest(pt.X, pt.Y) = FCaptureRegion;
+        GetScrollBarTimer.Enabled := ScrollHitTest(pt.X, pt.Y) = FCaptureRegion;
       end;
 
     shtVertThumb:
@@ -862,7 +862,7 @@ begin
   Result := Self.Perform(msg, wparam, lparam);
 end;
 
-function TFsCustomControl.HitTest(X, Y: Integer): TScrollHitTest;
+function TFsCustomControl.ScrollHitTest(X, Y: Integer): TScrollHitTest;
 var
   fsi: TFsScrollInfo;
   vsi, hsi: TScrollInfo;
@@ -1206,7 +1206,7 @@ begin
   Windows.GetClientRect(Handle, rc);
 
   msgr.Result := HTCLIENT;
-  HitTest := Self.HitTest(pt.X, pt.Y);
+  HitTest := Self.ScrollHitTest(pt.X, pt.Y);
 
   case HitTest of
     shtNoWhere: if not PtInRect(rc, pt) then msgr.Result := HTBORDER;
@@ -1230,7 +1230,7 @@ begin
   Windows.ScreenToClient(Handle, pt);
 
   DoCapture := True;
-  sht := Self.HitTest(pt.X, pt.Y);
+  sht := Self.ScrollHitTest(pt.X, pt.Y);
 
   case sht of
     shtNoWhere, shtBorder: DoCapture := False;
