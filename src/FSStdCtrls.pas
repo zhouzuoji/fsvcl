@@ -2228,10 +2228,7 @@ begin
   end;
 
   if changed and (Self.Parent is TFsScrollContainer) then
-  begin
-    TFsScrollContainer(Self.Parent).RecalcNC;
-    Self.Parent.Invalidate;
-  end;
+    TFsScrollContainer(Self.Parent).PaintNC;
 end;
 
 { TFsListBox }
@@ -2324,10 +2321,7 @@ begin
   end;
 
   if changed and (Self.Parent is TFsScrollContainer) then
-  begin
-    TFsScrollContainer(Self.Parent).RecalcNC;
-    Self.Parent.Invalidate;
-  end;
+    TFsScrollContainer(Self.Parent).PaintNC;
 end;
 
 { TFsBorderlessListView }
@@ -2398,10 +2392,7 @@ begin
   end;
 
   if changed and (Self.Parent is TFsScrollContainer) then
-  begin
-    TFsScrollContainer(Self.Parent).RecalcNC;
-    Self.Parent.Invalidate;
-  end;
+    TFsScrollContainer(Self.Parent).PaintNC;
 end;
 
 { TFsListView }
@@ -2514,10 +2505,7 @@ begin
   end;
 
   if changed and (Self.Parent is TFsScrollContainer) then
-  begin
-    TFsScrollContainer(Self.Parent).RecalcNC;
-    Self.Parent.Invalidate;
-  end;
+    TFsScrollContainer(Self.Parent).PaintNC;
 end;
 
 { TFsTreeView }

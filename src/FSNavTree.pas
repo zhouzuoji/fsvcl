@@ -104,7 +104,7 @@ type
     function DrawNode(node: TFsNavTreeNode; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
     function DrawCatalog(catalog: TFsNavTreeCatalog; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
   protected
-    procedure PaintClientRect(const rc: TRect); override;
+    procedure Paint; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -144,8 +144,6 @@ begin
 end;
 
 function TFsNavTree.DrawCatalog(catalog: TFsNavTreeCatalog; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
-var
-  i: Integer;
 begin
   Result := True;
 
@@ -154,8 +152,6 @@ begin
 end;
 
 function TFsNavTree.DrawNode(node: TFsNavTreeNode; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
-var
-  i: Integer;
 begin
   Result := True;
 end;
@@ -188,7 +184,7 @@ begin
   end;
 end;
 
-procedure TFsNavTree.PaintClientRect(const rc: TRect);
+procedure TFsNavTree.Paint;
 var
   si: TScrollInfo;
   i: Integer;
@@ -197,7 +193,7 @@ begin
   inherited;
 
   DrawInfo.CurrentOffsetY := 0;
-  DrawInfo.ClientRect := rc;
+  Windows.GetClientRect(Handle, DrawInfo.ClientRect);
 
   Self.GetControlScrollInfo(si, True);
 
@@ -220,7 +216,7 @@ var
   ContentHeight: Integer;
 begin
   ContentHeight := GetContentHeight;
-  Self.GetClientRectNoScroll(rc);
+  Windows.GetClientRect(Handle, rc);
 
   Self.SetScrollRange(True, 0, ContentHeight - 1, rc.Bottom - rc.Top);
 end;

@@ -12,7 +12,6 @@ type
   protected
     function DoScroll(msg: DWORD; wparam, lparam: Integer): Integer; override;
     function GetControlScrollInfo(var si: TScrollInfo; isVert: Boolean): Boolean; override;
-    procedure ClientRectChanged(const rc: TRect); override;
     function CreateRealControl: TControl; virtual; abstract;
   public
     constructor Create(AOwner: TComponent); override;
@@ -41,12 +40,6 @@ begin
   else Result := -1;
 end;
 
-procedure TFsScrollContainer.ClientRectChanged(const rc: TRect);
-begin
-  if Assigned(FRealControl) then
-    FRealControl.BoundsRect := rc;
-end;
-
 constructor TFsScrollContainer.Create(AOwner: TComponent);
 begin
   inherited;
@@ -59,6 +52,7 @@ begin
 
   FRealControl := Self.CreateRealControl;
   FRealControl.Parent := Self;
+  FRealControl.Align := alClient;
 end;
 
 function TFsScrollContainer.GetControlScrollInfo(var si: TScrollInfo; isVert: Boolean): Boolean;

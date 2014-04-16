@@ -92,32 +92,40 @@ type
     function GetRealScrollBar: TFsCustomScrollBar;
     function NeedScrollBar(out HScroll: Boolean): Boolean;
     procedure GetScrollInfo(var fsi: TFsScrollInfo; var vsi, hsi: TScrollInfo; const r: TRect);
-    procedure ClipEdge(out r: TRect);
-    procedure Paint;
+    function HitTest(X, Y: Integer): TScrollHitTest;
+    procedure NCChanged;
+    procedure ClipEdge(var r: TRect);
+    procedure CheckScrollBarCapture(X, Y: Integer);
+    procedure CheckScrollBarCaptureMouseUp(X, Y: Integer);
   protected
     FMouseInControl: Boolean;
-    procedure CMBorderChanged(var msgr: TMessage); message CM_BORDERCHANGED;
+    procedure WMCancelMode(var Message: TWMCancelMode); message WM_CANCELMODE;
     procedure WMEraseBkgnd(var msgr: TWMEraseBkgnd); message WM_ERASEBKGND;
     procedure WMVScroll(var msgr: TWMVScroll); message WM_VSCROLL;
     procedure WMHScroll(var msgr: TWMHScroll); message WM_HSCROLL;
-    procedure WMPaint(var Message: TWMPaint); message WM_PAINT;
     procedure WMSize(var msgr: TWMSize); message WM_SIZE;
+    procedure WMPaint(var Message: TWMPaint); message WM_PAINT;
     procedure WMMouseWheel(var msgr: TWMMouseWheel); message WM_MOUSEWHEEL;
     procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
+    procedure WMNCHitTest(var msgr: TWMNCHitTest); message WM_NCHITTEST;
     procedure WMNCPaint(var msgr: TWMNCPaint); message WM_NCPAINT;
     procedure CMMouseEnter(var msgr: TMessage); message CM_MOUSEENTER;
     procedure CMMouseLeave(var msgr: TMessage); message CM_MOUSELEAVE;
+    procedure WMNCLButtonDown(var msgr: TWMNCLButtonDown); message WM_NCLBUTTONDOWN;
+    procedure WMNCLButtonUp(var msgr: TWMNCLButtonUp); message WM_NCLBUTTONUP;
+    procedure WMNCMouseMove(var msgr: TWMNCMouseMove); message WM_NCMOUSEMOVE;
+    procedure WMNCMouseHover(var msgr: TMessage); message WM_NCMOUSEHOVER;
+    procedure WMNCMouseLeave(var msgr: TMessage); message WM_NCMOUSELEAVE;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure CreateParams(var Params: TCreateParams); override;
     procedure PaintWindow(DC: HDC); override;
+    procedure Paint; virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function DoScroll(msg: DWORD; wparam, lparam: Integer): Integer; virtual;
     function GetControlScrollInfo(var si: TScrollInfo; isVert: Boolean): Boolean; virtual;
     procedure DragThumb(BarFlag, ScrollCode, nTrackPos: Integer); virtual;
-    procedure ClientRectChanged(const rc: TRect); virtual;
-    procedure PaintClientRect(const rc: TRect); virtual;
     procedure DoCanScroll(IsVert: Boolean; var nPos: Integer); dynamic;
     property ScrollBars: TScrollStyle read FScrollBars write SetScrollBars;
     property ScrollBarDrawer: TFsCustomScrollBar read FScrollBarDrawer write SetScrollBarDrawer;
@@ -125,11 +133,9 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure PaintNC;
     procedure SetScrollRange(IsVert: Boolean; nMin, nMax, nPage: Integer);
     procedure SetScrollPos(IsVert: Boolean; nPos: Integer);
-    function HitTest(X, Y: Integer): TScrollHitTest;
-    procedure GetClientRectNoScroll(var rc: TRect);
-    procedure RecalcNC;
     property ParentBackground;
     property ParentCtl3D;
   end;
@@ -616,17 +622,104 @@ end;
 
 { TFsCustomControl }
 
-procedure TFsCustomControl.ClientRectChanged(const rc: TRect);
+procedure TFsCustomControl.CheckScrollBarCapture(X, Y: Integer);
+var
+  pt: TPoint;
+  fsi: TFsScrollInfo;
+  vsi, hsi: TScrollInfo;
+  nPos: Integer;
+  r: TRect;
 begin
+  case FCaptureRegion of
+    shtLeftArrow, shtRightArrow, shtPageLeft, shtPageRight,
+    shtTopArrow, shtBottomArrow, shtPageUp, shtPageDown:
+      begin
+        GetCursorPos(pt);
+        Windows.ScreenToClient(Handle, pt);
+        GetScrollBarTimer.Enabled := HitTest(pt.X, pt.Y) = FCaptureRegion;
+      end;
 
+    shtVertThumb:
+      begin
+        Self.ClipEdge(r);
+        Self.GetScrollInfo(fsi, vsi, hsi, r);
+
+        if fsi.ShowVScroll then
+        begin
+          nPos := GetRealScrollBar.CalcVPos(fsi.VScroll, vsi, Y - FCapturePoint.Y);
+
+          if nPos >= hsi.nMin then
+            Self.DragThumb(SB_VERT, SB_THUMBTRACK, nPos);
+        end;
+      end;
+
+    shtHorzThumb:
+      begin
+        Self.ClipEdge(r);
+        Self.GetScrollInfo(fsi, vsi, hsi, r);
+
+        if fsi.ShowHScroll then
+        begin
+          nPos := GetRealScrollBar.CalcHPos(fsi.HScroll, hsi, X - FCapturePoint.X);
+
+          if nPos >= hsi.nMin then
+            Self.DragThumb(SB_HORZ, SB_THUMBTRACK, nPos);
+        end;
+      end;
+  end;
 end;
 
-procedure TFsCustomControl.ClipEdge(out r: TRect);
+procedure TFsCustomControl.CheckScrollBarCaptureMouseUp(X, Y: Integer);
+var
+  fsi: TFsScrollInfo;
+  vsi, hsi: TScrollInfo;
+  nPos: Integer;
+  r: TRect;
+begin
+  try
+    case FCaptureRegion of
+      shtVertThumb:
+        begin
+          Self.ClipEdge(r);
+          Self.GetScrollInfo(fsi, vsi, hsi, r);
+
+          if fsi.ShowVScroll then
+          begin
+            nPos := GetRealScrollBar.CalcVPos(fsi.VScroll, vsi, Y - FCapturePoint.Y);
+
+            if nPos >= hsi.nMin then
+              Self.DragThumb(SB_VERT, SB_THUMBPOSITION, nPos);
+          end;
+        end;
+
+      shtHorzThumb:
+        begin
+          Self.ClipEdge(r);
+          Self.GetScrollInfo(fsi, vsi, hsi, r);
+
+          if fsi.ShowHScroll then
+          begin
+            nPos := GetRealScrollBar.CalcHPos(fsi.HScroll, hsi, X - FCapturePoint.X);
+
+            if nPos >= hsi.nMin then
+              Self.DragThumb(SB_HORZ, SB_THUMBPOSITION, nPos);
+          end;
+        end;
+    end;
+  finally
+    ReleaseCapture;
+    FCaptureRegion := shtNoWhere;
+    GetScrollBarTimer.Enabled := False;
+  end;
+end;
+
+procedure TFsCustomControl.ClipEdge(var r: TRect);
 var
   cxEdge, cyEdge: Integer;
 begin
-  Windows.GetClientRect(Handle, r);
-
+  GetWindowRect(Handle, r);
+  Windows.MapWindowPoints(0, Handle, r, 2);
+  
   if BevelKind <> bkNone then
   begin
     cxEdge := GetSystemMetrics(SM_CXEDGE) shr 1;
@@ -648,13 +741,6 @@ begin
       if beBottom in BevelEdges then Dec(r.Bottom, cyEdge);
     end;
   end;
-end;
-
-procedure TFsCustomControl.CMBorderChanged(var msgr: TMessage);
-begin
-  inherited;
-
-  if Self.HandleAllocated then Self.RecalcNC;
 end;
 
 procedure TFsCustomControl.CMMouseEnter(var msgr: TMessage);
@@ -706,11 +792,6 @@ begin
     Self.DoScroll(WM_VSCROLL, MakeLong(ScrollCode, nTrackPos), 0)
   else
     Self.DoScroll(WM_HSCROLL, MakeLong(ScrollCode, nTrackPos), 0);
-end;
-
-procedure TFsCustomControl.GetClientRectNoScroll(var rc: TRect);
-begin
-  Self.ClipEdge(rc);
 end;
 
 function TFsCustomControl.GetControlScrollInfo(var si: TScrollInfo; isVert: Boolean): Boolean;
@@ -823,147 +904,38 @@ begin
 end;
 
 procedure TFsCustomControl.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-var
-  sht: TScrollHitTest;
-  DoCapture: Boolean;
-  fsi: TFsScrollInfo;
-  vsi, hsi: TScrollInfo;
-  r: TRect;
 begin
   if not (csDesigning in ComponentState) and (CanFocus or (GetParentForm(Self) = nil)) then
   begin
     SetFocus;
   end;
-
-  DoCapture := True;
-  sht := Self.HitTest(X, Y);
-
-  case sht of
-    shtNoWhere, shtBorder: DoCapture := False;
-    shtLeftArrow: Self.DoScroll(WM_HSCROLL, SB_LINELEFT, 0);
-    shtRightArrow: Self.DoScroll(WM_HSCROLL, SB_LINERIGHT, 0);
-    shtHorzThumb: ;
-    shtPageLeft: Self.DoScroll(WM_HSCROLL, SB_PAGELEFT, 0);
-    shtPageRight: Self.DoScroll(WM_HSCROLL, SB_PAGERIGHT, 0);
-    shtTopArrow: Self.DoScroll(WM_VSCROLL, SB_LINEUP, 0);
-    shtBottomArrow: Self.DoScroll(WM_VSCROLL, SB_LINEDOWN, 0);
-    shtVertThumb: ;
-    shtPageUp: Self.DoScroll(WM_VSCROLL, SB_PAGEUP, 0);
-    shtPageDown: Self.DoScroll(WM_VSCROLL, SB_PAGEDOWN, 0);
-  end;
-
-  if DoCapture then
-  begin
-    FCaptureRegion := sht;
-    SetCapture(Self.Handle);
-
-    if FCaptureRegion in [shtVertThumb, shtHorzThumb] then
-    begin
-      Self.ClipEdge(r);
-      Self.GetScrollInfo(fsi, vsi, hsi, r);
-      FCapturePoint.X := X - fsi.HThumb.Left;
-      FCapturePoint.Y := Y - fsi.VThumb.Top;
-    end
-    else begin
-      GetScrollBarTimer.FScrollControl := Self;
-      GetScrollBarTimer.Enabled := True;
-    end;
-  end;
-
+  
   inherited;
 end;
 
 procedure TFsCustomControl.MouseMove(Shift: TShiftState; X, Y: Integer);
-var
-  pt: TPoint;
-  fsi: TFsScrollInfo;
-  vsi, hsi: TScrollInfo;
-  nPos: Integer;
-  r: TRect;
 begin
-  case FCaptureRegion of
-    shtLeftArrow, shtRightArrow, shtPageLeft, shtPageRight,
-    shtTopArrow, shtBottomArrow, shtPageUp, shtPageDown:
-      begin
-        GetCursorPos(pt);
-        Windows.ScreenToClient(Handle, pt);
-        GetScrollBarTimer.Enabled := HitTest(pt.X, pt.Y) = FCaptureRegion;
-      end;
-
-    shtVertThumb:
-      begin
-        Self.ClipEdge(r);
-        Self.GetScrollInfo(fsi, vsi, hsi, r);
-
-        if fsi.ShowVScroll then
-        begin
-          nPos := GetRealScrollBar.CalcVPos(fsi.VScroll, vsi, Y - FCapturePoint.Y);
-
-          if nPos >= hsi.nMin then
-            Self.DragThumb(SB_VERT, SB_THUMBTRACK, nPos);
-        end;
-      end;
-
-    shtHorzThumb:
-      begin
-        Self.ClipEdge(r);
-        Self.GetScrollInfo(fsi, vsi, hsi, r);
-
-        if fsi.ShowHScroll then
-        begin
-          nPos := GetRealScrollBar.CalcHPos(fsi.HScroll, hsi, X - FCapturePoint.X);
-
-          if nPos >= hsi.nMin then
-            Self.DragThumb(SB_HORZ, SB_THUMBTRACK, nPos);
-        end;
-      end;
-  end;
-
-  inherited;
+  if FCaptureRegion <> shtNoWhere then Self.CheckScrollBarCapture(X, Y)
+  else inherited;
 end;
 
 procedure TFsCustomControl.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
-var
-  fsi: TFsScrollInfo;
-  vsi, hsi: TScrollInfo;
-  nPos: Integer;
-  r: TRect;
 begin
-  case FCaptureRegion of
-    shtVertThumb:
-      begin
-        Self.ClipEdge(r);
-        Self.GetScrollInfo(fsi, vsi, hsi, r);
+  if FCaptureRegion <> shtNoWhere then
+    Self.CheckScrollBarCaptureMouseUp(X, Y)
+  else
+    inherited;
+end;
 
-        if fsi.ShowVScroll then
-        begin
-          nPos := GetRealScrollBar.CalcVPos(fsi.VScroll, vsi, Y - FCapturePoint.Y);
+procedure TFsCustomControl.NCChanged;
+begin
+  if HandleAllocated then
+  begin
+    SetWindowPos(Handle, 0, 0,0,0,0, SWP_NOACTIVATE or
+    SWP_NOZORDER or SWP_NOMOVE or SWP_NOSIZE or SWP_FRAMECHANGED);
 
-          if nPos >= hsi.nMin then
-            Self.DragThumb(SB_VERT, SB_THUMBPOSITION, nPos);
-        end;
-      end;
-
-    shtHorzThumb:
-      begin
-        Self.ClipEdge(r);
-        Self.GetScrollInfo(fsi, vsi, hsi, r);
-
-        if fsi.ShowHScroll then
-        begin
-          nPos := GetRealScrollBar.CalcHPos(fsi.HScroll, hsi, X - FCapturePoint.X);
-
-          if nPos >= hsi.nMin then
-            Self.DragThumb(SB_HORZ, SB_THUMBPOSITION, nPos);
-        end;
-      end;
+    if Visible then Self.PaintNC;
   end;
-
-  ReleaseCapture;
-  FCaptureRegion := shtNoWhere;
-  GetScrollBarTimer.Enabled := False;
-  
-  inherited;
 end;
 
 function TFsCustomControl.NeedScrollBar(out HScroll: Boolean): Boolean;
@@ -981,53 +953,61 @@ begin
   if (AComponent = FScrollBarDrawer) and (Operation = opRemove) then
   begin
     FScrollBarDrawer := nil;
-    Self.RecalcNC;
+    Self.NCChanged;
   end;
 end;
 
 procedure TFsCustomControl.Paint;
+begin
+
+end;
+
+procedure TFsCustomControl.PaintNC;
 const
   InnerStyles: array[TBevelCut] of Integer = (0, BDR_SUNKENINNER, BDR_RAISEDINNER, 0);
   OuterStyles: array[TBevelCut] of Integer = (0, BDR_SUNKENOUTER, BDR_RAISEDOUTER, 0);
   EdgeStyles: array[TBevelKind] of Integer = (0, 0, BF_SOFT, BF_FLAT);
   Ctl3DStyles: array[Boolean] of Integer = (BF_MONO, 0);
 var
+  dc: HDC;
+  rw: TRect;
   sb: TFsCustomScrollBar;
-  rc: TRect;
   fsi: TFsScrollInfo;
   vsi, hsi: TScrollInfo;
 begin
-  Windows.GetClientRect(Handle, rc);
+  rw.Left := 0;
+  rw.Top := 0;
+  rw.Right := Width;
+  rw.Bottom := Height;
+  
+  dc := GetWindowDC(Handle);
+  
+  try
+    if BevelKind <> bkNone then
+      Windows.DrawEdge(dc, rw, InnerStyles[BevelInner] or OuterStyles[BevelOuter],
+        Byte(BevelEdges) or EdgeStyles[BevelKind] or Ctl3DStyles[Ctl3D] or BF_ADJUST);
 
-  if BevelKind <> bkNone then
-    Windows.DrawEdge(Canvas.Handle, rc, InnerStyles[BevelInner] or OuterStyles[BevelOuter],
-      Byte(BevelEdges) or EdgeStyles[BevelKind] or Ctl3DStyles[Ctl3D] or BF_ADJUST);
+    sb := GetRealScrollBar;
 
-  sb := GetRealScrollBar;
+    Self.GetScrollInfo(fsi, vsi, hsi, rw);
 
-  Self.GetScrollInfo(fsi, vsi, hsi, rc);
+    if fsi.ShowVScroll then
+    begin
+      Dec(rw.Right, sb.VScrollWidth);
+      sb.DrawVScroll(dc, fsi.VScroll, fsi.TopArrow, fsi.BottomArrow, fsi.VThumb);
+    end;
 
-  if fsi.ShowVScroll then
-  begin
-    Dec(rc.Right, sb.VScrollWidth);
-    sb.DrawVScroll(Canvas.Handle, fsi.VScroll, fsi.TopArrow, fsi.BottomArrow, fsi.VThumb);
+    if fsi.ShowHScroll then
+    begin
+      Dec(rw.Bottom, sb.HScrollHeight);
+      sb.DrawHScroll(dc, fsi.HScroll, fsi.LeftArrow, fsi.RightArrow, fsi.HThumb);
+    end;
+
+    if fsi.ShowVScroll and fsi.ShowHScroll then
+      sb.DrawIntersect(dc, fsi.Intersect);
+  finally
+    ReleaseDC(Handle, dc);
   end;
-
-  if fsi.ShowHScroll then
-  begin
-    Dec(rc.Bottom, sb.HScrollHeight);
-    sb.DrawHScroll(Canvas.Handle, fsi.HScroll, fsi.LeftArrow, fsi.RightArrow, fsi.HThumb);
-  end;
-
-  if fsi.ShowVScroll and fsi.ShowHScroll then
-    sb.DrawIntersect(Canvas.Handle, fsi.Intersect);
-
-  Self.PaintClientRect(rc);
-end;
-
-procedure TFsCustomControl.PaintClientRect(const rc: TRect);
-begin
-
 end;
 
 procedure TFsCustomControl.PaintWindow(DC: HDC);
@@ -1046,25 +1026,6 @@ begin
   end;
 end;
 
-procedure TFsCustomControl.RecalcNC;
-var
-  rc: TRect;
-  sb: TFsCustomScrollBar;
-  fv, fh: Boolean;
-begin
-  Self.ClipEdge(rc);
-
-  sb := Self.GetRealScrollBar;
-
-  fv := Self.NeedScrollBar(fh);
-
-  if fv then Dec(rc.Right, sb.VScrollWidth);
-
-  if fh then Dec(rc.Bottom, sb.HScrollHeight);
-
-  Self.ClientRectChanged(rc);   
-end;
-
 procedure TFsCustomControl.SetScrollBarDrawer(const Value: TFsCustomScrollBar);
 begin
   if Value <> FScrollBarDrawer then
@@ -1077,7 +1038,7 @@ begin
     if Assigned(FScrollBarDrawer) then
       FScrollBarDrawer.FreeNotification(Self);
 
-    Self.RecalcNC;
+    Self.NCChanged;
   end;
 end;
 
@@ -1086,7 +1047,7 @@ begin
   if FScrollBars <> Value then
   begin
     FScrollBars := Value;
-    Self.RecalcNC;  
+    Self.NCChanged;  
   end;
 end;
 
@@ -1109,6 +1070,14 @@ begin
   si.nMax := nMax;
   si.nPage := nPage;
   Windows.SetScrollInfo(Handle, BAR_FLAGS[IsVert], si, True);
+  Self.NCChanged;
+end;
+
+procedure TFsCustomControl.WMCancelMode(var Message: TWMCancelMode);
+begin
+  inherited;
+
+  FCaptureRegion := shtNoWhere;
 end;
 
 procedure TFsCustomControl.WMEraseBkgnd(var msgr: TWMEraseBkgnd);
@@ -1151,7 +1120,7 @@ begin
   if nPos <> si.nPos then
   begin
     Windows.SetScrollPos(Handle, SB_HORZ, nPos, False);
-    Self.Invalidate;
+    Self.PaintNC;
   end;
 end;
 
@@ -1225,8 +1194,113 @@ begin
   msgr.Result := 0;
 end;
 
+procedure TFsCustomControl.WMNCHitTest(var msgr: TWMNCHitTest);
+var
+  pt: TPoint;
+  rc: TRect;
+  HitTest: TScrollHitTest;
+begin
+  pt.X := msgr.XPos;
+  pt.Y := msgr.YPos;
+  Windows.ScreenToClient(Handle, pt);
+  Windows.GetClientRect(Handle, rc);
+
+  msgr.Result := HTCLIENT;
+  HitTest := Self.HitTest(pt.X, pt.Y);
+
+  case HitTest of
+    shtNoWhere: if not PtInRect(rc, pt) then msgr.Result := HTBORDER;
+    shtBorder: msgr.Result := HTBORDER;
+    shtLeftArrow, shtRightArrow, shtHorzThumb, shtPageLeft, shtPageRight: msgr.Result := HTHSCROLL;
+    shtTopArrow, shtBottomArrow, shtVertThumb, shtPageUp, shtPageDown: msgr.Result := HTVSCROLL;
+  end;
+end;
+
+procedure TFsCustomControl.WMNCLButtonDown(var msgr: TWMNCLButtonDown);
+var
+  pt: TPoint;
+  sht: TScrollHitTest;
+  DoCapture: Boolean;
+  fsi: TFsScrollInfo;
+  vsi, hsi: TScrollInfo;
+  r: TRect;
+begin
+  pt.X := msgr.XCursor;
+  pt.Y := msgr.YCursor;
+  Windows.ScreenToClient(Handle, pt);
+
+  DoCapture := True;
+  sht := Self.HitTest(pt.X, pt.Y);
+
+  case sht of
+    shtNoWhere, shtBorder: DoCapture := False;
+    shtLeftArrow: Self.DoScroll(WM_HSCROLL, SB_LINELEFT, 0);
+    shtRightArrow: Self.DoScroll(WM_HSCROLL, SB_LINERIGHT, 0);
+    shtHorzThumb: ;
+    shtPageLeft: Self.DoScroll(WM_HSCROLL, SB_PAGELEFT, 0);
+    shtPageRight: Self.DoScroll(WM_HSCROLL, SB_PAGERIGHT, 0);
+    shtTopArrow: Self.DoScroll(WM_VSCROLL, SB_LINEUP, 0);
+    shtBottomArrow: Self.DoScroll(WM_VSCROLL, SB_LINEDOWN, 0);
+    shtVertThumb: ;
+    shtPageUp: Self.DoScroll(WM_VSCROLL, SB_PAGEUP, 0);
+    shtPageDown: Self.DoScroll(WM_VSCROLL, SB_PAGEDOWN, 0);
+  end;
+
+  if DoCapture then
+  begin
+    FCaptureRegion := sht;
+    SetCapture(Self.Handle);
+
+    if FCaptureRegion in [shtVertThumb, shtHorzThumb] then
+    begin
+      Self.ClipEdge(r);
+      Self.GetScrollInfo(fsi, vsi, hsi, r);
+      FCapturePoint.X := pt.X - fsi.HThumb.Left;
+      FCapturePoint.Y := pt.Y - fsi.VThumb.Top;
+    end
+    else begin
+      GetScrollBarTimer.FScrollControl := Self;
+      GetScrollBarTimer.Enabled := True;
+    end;
+  end;
+end;
+
+procedure TFsCustomControl.WMNCLButtonUp(var msgr: TWMNCLButtonUp);
+var
+  pt: TPoint;
+begin
+  pt.X := msgr.XCursor;
+  pt.Y := msgr.YCursor;
+  Windows.ScreenToClient(Handle, pt);
+  
+  if FCaptureRegion <> shtNoWhere then
+    Self.CheckScrollBarCaptureMouseUp(pt.X, pt.Y)
+  else
+    inherited;
+end;
+
+procedure TFsCustomControl.WMNCMouseHover(var msgr: TMessage);
+begin
+  inherited;
+end;
+
+procedure TFsCustomControl.WMNCMouseLeave(var msgr: TMessage);
+begin
+  inherited;
+end;
+
+procedure TFsCustomControl.WMNCMouseMove(var msgr: TWMNCMouseMove);
+begin
+  inherited;
+end;
+
 procedure TFsCustomControl.WMNCPaint(var msgr: TWMNCPaint);
 begin
+  try
+    PaintNC;
+  except
+
+  end;
   msgr.Result := 0;
 end;
 
@@ -1240,8 +1314,7 @@ end;
 procedure TFsCustomControl.WMSize(var msgr: TWMSize);
 begin
   inherited;
-
-  RecalcNC;
+  NCChanged;
 end;
 
 procedure TFsCustomControl.WMVScroll(var msgr: TWMVScroll);
@@ -1271,7 +1344,7 @@ begin
   if nPos <> si.nPos then
   begin
     Windows.SetScrollPos(Handle, SB_VERT, nPos, True);
-    Self.Invalidate;
+    Self.PaintNC;
   end;
 end;
 
