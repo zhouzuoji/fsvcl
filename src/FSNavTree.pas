@@ -97,9 +97,18 @@ type
   end;
   PFsNavTreeDrawInfo = ^TFsNavTreeDrawInfo;
 
-  TNodeClickEvent = procedure(Sender: TObject; node: TFsNavTreeNode) of object;
-
   TFsNavTreeHitTest = (htNone, htCatalogImage, htCatalogText, htNodeImage, htNodeText);
+
+  TFsNavTreeHitTestInfo = record
+    ClientRect: TRect;
+    OffsetY: Integer;
+    CurrentOffsetY: Integer;
+    HitTest: TFsNavTreeHitTest;
+    area: TRect;
+    obj: TObject;
+  end;
+
+  TNodeClickEvent = procedure(Sender: TObject; node: TFsNavTreeNode) of object;
 
   TFsNavTree = class(TFsCustomControl)
   private
@@ -113,11 +122,16 @@ type
     FNodeIndent: Integer;
     FNodeTextOffset: Integer;
     FOnClickNode: TNodeClickEvent;
+    function GetNodePictrue(node: TFsNavTreeNode): TPicture;
+    function GetNodeImageRect(node: TFsNavTreeNode; const r: TRect): TRect;
+    function GetCatalogImageRect(catalog: TFsNavTreeCatalog; const r: TRect): TRect;
     procedure SetCatalogs(const Value: TFsNavTreeCatalogs);
     function GetVisibleNodeTotalHeight(node: TFsNavTreeNode): Integer;
     function GetContentHeight: Integer;
     function DrawNode(node: TFsNavTreeNode; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
     function DrawCatalog(catalog: TFsNavTreeCatalog; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
+    function HitTestNode(X, Y: Integer; node: TFsNavTreeNode; var HitTestInfo: TFsNavTreeHitTestInfo): Boolean;
+    function HitTestCatalog(X, Y: Integer; catalog: TFsNavTreeCatalog; var HitTestInfo: TFsNavTreeHitTestInfo): Boolean;
     procedure SetCatalogImageOffset(const Value: Integer);
     procedure SetCatalogTextOffset(const Value: Integer);
     procedure SetCatalogFont(const Value: TFont);
@@ -130,6 +144,7 @@ type
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure Paint; override;
     procedure DoCanScroll(IsVert: Boolean; var nPos: Integer); override;
+    procedure DoClickNode(node: TFsNavTreeNode);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -195,6 +210,12 @@ procedure TFsNavTree.DoCanScroll(IsVert: Boolean; var nPos: Integer);
 begin
   inherited;
   Self.Invalidate;
+end;
+
+procedure TFsNavTree.DoClickNode(node: TFsNavTreeNode);
+begin
+  if Assigned(FOnClickNode) then
+    FOnClickNode(Self, node);
 end;
 
 function TFsNavTree.DrawCatalog(catalog: TFsNavTreeCatalog; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
@@ -271,7 +292,7 @@ begin
     Canvas.TextRect(r, node.FText, [tfSingleLine, tfVerticalCenter, tfEndEllipsis]);
   end;
 
-  if Result then
+  if Result and node.Expanded then
   begin
     for i := 0 to node.ChildNodes.Count - 1 do
     begin
@@ -282,6 +303,14 @@ begin
       end;
     end;
   end;
+end;
+
+function TFsNavTree.GetCatalogImageRect(catalog: TFsNavTreeCatalog; const r: TRect): TRect;
+begin
+  Result.Top :=  r.Top + (catalog.Height - catalog.Image.Height) div 2;
+  Result.Bottom := Result.Bottom + catalog.Image.Height;
+  Result.Left := r.Left + FCatalogImageOffset;
+  Result.Right := Result.Left + catalog.Image.Width;
 end;
 
 function TFsNavTree.GetContentHeight: Integer;
@@ -299,6 +328,24 @@ begin
   end;
 end;
 
+function TFsNavTree.GetNodeImageRect(node: TFsNavTreeNode; const r: TRect): TRect;
+var
+  pic: TPicture;
+begin
+  pic := GetNodePictrue(node);
+  Result.Top :=  r.Top + (node.Height - pic.Height) div 2;
+  Result.Bottom := Result.Bottom + pic.Height;
+  Result.Left := r.Left + FCatalogImageOffset + (node.Level + 1) * FNodeIndent;
+  Result.Right := Result.Left + pic.Width;
+end;
+
+function TFsNavTree.GetNodePictrue(node: TFsNavTreeNode): TPicture;
+begin
+  if node.ChildNodes.Count = 0 then Result := FLeafImage
+  else if node.Expanded then Result := FExpandedImage
+  else Result := FCollapsedImage;
+end;
+
 function TFsNavTree.GetVisibleNodeTotalHeight(node: TFsNavTreeNode): Integer;
 var
   i: Integer;
@@ -313,13 +360,129 @@ begin
 end;
 
 function TFsNavTree.HitTest(X, Y: Integer; var area: TRect; var obj: TObject): TFsNavTreeHitTest;
+var
+  si: TScrollInfo;
+  i: Integer;
+  HitTestInfo: TFsNavTreeHitTestInfo;
 begin
+  Windows.GetClientRect(Handle, HitTestInfo.ClientRect);
 
+  Result := htNone;
+
+  if (X < HitTestInfo.ClientRect.Left) or (X >= HitTestInfo.ClientRect.Right)
+    or (Y < HitTestInfo.ClientRect.Top) or (Y >= HitTestInfo.ClientRect.Bottom) then Exit;
+  
+  HitTestInfo.CurrentOffsetY := 0;
+
+  Self.GetControlScrollInfo(si, True);
+
+  if NeedScroll(si) then HitTestInfo.OffsetY := si.nPos
+  else HitTestInfo.OffsetY := 0;
+
+  for i := 0 to FCatalogs.Count - 1 do
+    if not Self.HitTestCatalog(X, Y, Catalogs[i], HitTestInfo) then
+    begin
+      Result := HitTestInfo.HitTest;
+      CopyRect(area, HitTestInfo.area);
+      obj := HitTestInfo.obj;
+      Break;
+    end;
+end;
+
+function TFsNavTree.HitTestCatalog(X, Y: Integer; catalog: TFsNavTreeCatalog; var HitTestInfo: TFsNavTreeHitTestInfo): Boolean;
+var
+  i, t, b: Integer;
+begin
+  Result := True;
+
+  t := HitTestInfo.ClientRect.Top + HitTestInfo.CurrentOffsetY - HitTestInfo.OffsetY;
+  b := t + catalog.Height;
+  Inc(HitTestInfo.CurrentOffsetY, catalog.Height);
+
+  if (Y >= t) and (Y < b) then
+  begin
+    HitTestInfo.area.Top := t;
+    HitTestInfo.area.Bottom := b;
+    HitTestInfo.area.Left := HitTestInfo.ClientRect.Left;
+    HitTestInfo.area.Right := HitTestInfo.ClientRect.Right;
+    HitTestInfo.obj := catalog;
+
+    if PtInRect(GetCatalogImageRect(catalog, HitTestInfo.area), Point(X, Y)) then
+      HitTestInfo.HitTest := htCatalogImage
+    else
+      HitTestInfo.HitTest := htCatalogText;
+
+    Result := False;
+    Exit;
+  end;
+
+  for i := 0 to catalog.Nodes.Count - 1 do
+    if not Self.HitTestNode(X, Y, catalog.Nodes[i], HitTestInfo) then
+    begin
+      Result := False;
+      Break;
+    end;
+end;
+
+function TFsNavTree.HitTestNode(X, Y: Integer; node: TFsNavTreeNode; var HitTestInfo: TFsNavTreeHitTestInfo): Boolean;
+var
+  i, t, b: Integer;
+begin
+  Result := True;
+
+  t := HitTestInfo.ClientRect.Top + HitTestInfo.CurrentOffsetY - HitTestInfo.OffsetY;
+  b := t + node.Height;
+  Inc(HitTestInfo.CurrentOffsetY, node.Height);
+
+  if (Y >= t) and (Y < b) then
+  begin
+    HitTestInfo.area.Top := t;
+    HitTestInfo.area.Bottom := b;
+    HitTestInfo.area.Left := HitTestInfo.ClientRect.Left;
+    HitTestInfo.area.Right := HitTestInfo.ClientRect.Right;
+    HitTestInfo.obj := node;
+
+    if PtInRect(GetNodeImageRect(node, HitTestInfo.area), Point(X, Y)) then
+      HitTestInfo.HitTest := htNodeImage
+    else
+      HitTestInfo.HitTest := htNodeText;
+
+    Result := False;
+    Exit;
+  end;
+
+  for i := 0 to node.ChildNodes.Count - 1 do
+    if not Self.HitTestNode(X, Y, node.ChildNodes[i], HitTestInfo) then
+    begin
+      Result := False;
+      Break;
+    end;
 end;
 
 procedure TFsNavTree.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  area: TRect;
+  obj: TObject;
+  htr: TFsNavTreeHitTest;
 begin
   inherited;
+
+  htr := Self.HitTest(X, Y, area, obj);
+
+  case htr of
+    htNone: ;
+
+    htCatalogImage: ;
+
+    htCatalogText: ;
+
+    htNodeImage:
+      if TFsNavTreeNode(obj).ChildNodes.Count > 0 then
+        TFsNavTreeNode(obj).Expanded := not TFsNavTreeNode(obj).Expanded;
+
+    htNodeText:
+      DoClickNode(TFsNavTreeNode(obj));
+  end;
 end;
 
 procedure TFsNavTree.Paint;
