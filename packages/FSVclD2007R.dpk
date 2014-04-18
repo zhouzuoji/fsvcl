@@ -28,7 +28,6 @@ package FSVclD2007R;
 requires
   rtl,
   vcl,
-  FSBase,
   designide,
   xmlrtl,
   vclactnband,

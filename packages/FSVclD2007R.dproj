@@ -40,12 +40,11 @@
     <DCCReference Include="..\src\FSTheme.pas" />
     <DCCReference Include="..\src\FSTrayIcon.pas" />
     <DCCReference Include="..\src\FSVclBase.pas" />
-    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\designide.dcp" />
-    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\FSBase.dcp" />
-    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\rtl.dcp" />
-    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\vcl.dcp" />
-    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\vclactnband.dcp" />
-    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\vclx.dcp" />
-    <DCCReference Include="C:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\xmlrtl.dcp" />
+    <DCCReference Include="D:\MyDesktop\designide.dcp" />
+    <DCCReference Include="D:\MyDesktop\rtl.dcp" />
+    <DCCReference Include="D:\MyDesktop\vcl.dcp" />
+    <DCCReference Include="D:\MyDesktop\vclactnband.dcp" />
+    <DCCReference Include="D:\MyDesktop\vclx.dcp" />
+    <DCCReference Include="D:\MyDesktop\xmlrtl.dcp" />
   </ItemGroup>
 </Project>
