@@ -13,7 +13,7 @@ implementation
 procedure Register;
 begin
   RegisterComponents('FSVCL', [TFsTheme, TFsRectangle, TFsNinePitchDrawable, TFsPictureDrawable,
-    TFsImage, TFsImageButton, TFsCoverButton, TFsSkinButton, TFsCheckBox,
+    TFsGradientDrawer, TFsImage, TFsImageButton, TFsCoverButton, TFsSkinButton, TFsCheckBox,
     TFsPanel, TFsPageControl, TFsEdit, TFsButtonEdit, TFsFlatScrollBar,
     TFsMemo, TFsListBox, TFsListView, TFsTreeView, TFsNavTree]);
 end;

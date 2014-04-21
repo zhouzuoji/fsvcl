@@ -158,6 +158,7 @@ type
     property BevelOuter;
     property BevelKind;
     property Ctl3D;
+    property Color;
     property Visible;
     property ParentBackground;
     property ParentCtl3D;

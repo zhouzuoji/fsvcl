@@ -12,8 +12,8 @@ type
     FOnChangeListeners: array of TExNotifyEvent;
   protected
     procedure DoChange(ID: TNotifyID);
-    function GetHeight: Integer; virtual; abstract;
-    function GetWidth: Integer; virtual; abstract;
+    function GetHeight: Integer; virtual;
+    function GetWidth: Integer; virtual;
     function GetEmpty: Boolean; virtual; abstract;
   public
     constructor Create(Owner: TComponent); override;
@@ -36,21 +36,15 @@ type
 
   TFsRectangle = class(TFsSingleDrawable)
   private
-    FWidth: Integer;
-    FHeight: Integer;
     FBorderColor: TColor;
     FColor: TColor;
     FBorderWidth: Integer;
     FBrushStyle: TBrushStyle;
-    procedure SetHeight(const Value: Integer);
-    procedure SetWidth(const Value: Integer);
     procedure SetBorderWidth(const Value: Integer);
     procedure SetColor(const Value: TColor);
     procedure SetBorderColor(const Value: TColor);
     procedure SetBrushStyle(const Value: TBrushStyle);
   protected
-    function GetHeight: Integer; override;
-    function GetWidth: Integer; override;
     function GetEmpty: Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -58,12 +52,29 @@ type
     function VertSafeStretch: Boolean; override;
     procedure Draw(ACanvas: TCanvas; const Rect: TRect); override;
   published
-    property Width: Integer read FWidth write SetWidth;
-    property Height: Integer read FHeight write SetHeight;
     property BrushStyle: TBrushStyle read FBrushStyle write SetBrushStyle;
     property Color: TColor read FColor write SetColor;
     property BorderWidth: Integer read FBorderWidth write SetBorderWidth;
     property BorderColor: TColor read FBorderColor write SetBorderColor;
+  end;
+
+  TFsGradientDrawer = class(TFsSingleDrawable)
+  private
+    FTopLeftColor: TColor;
+    FBottomRightColor: TColor;
+    FVertical: Boolean;
+    procedure SetBottomRightColor(const Value: TColor);
+    procedure SetTopLeftColor(const Value: TColor);
+    procedure SetVertical(const Value: Boolean);
+  published
+  public
+    function HorzSafeStretch: Boolean; override;
+    function VertSafeStretch: Boolean; override;
+    procedure Draw(ACanvas: TCanvas; const Rect: TRect); override;
+  published
+    property Vertical: Boolean read FVertical write SetVertical;
+    property TopLeftColor: TColor read FTopLeftColor write SetTopLeftColor;
+    property BottomRightColor: TColor read FBottomRightColor write SetBottomRightColor;
   end;
 
   TFsMultiFrameDrawable = class(TFsDrawable)
@@ -580,6 +591,16 @@ begin
   if FUpdateCount = 0 then DoChange(niChange);
 end;
 
+function TFsDrawable.GetHeight: Integer;
+begin
+  Result := -1;
+end;
+
+function TFsDrawable.GetWidth: Integer;
+begin
+  Result := -1;
+end;
+
 procedure TFsDrawable.RemoveOnChangeListener(listener: TExNotifyEvent);
 var
   i, j: Integer;
@@ -661,8 +682,6 @@ end;
 constructor TFsRectangle.Create(AOwner: TComponent);
 begin
   inherited;
-  FWidth := 200;
-  FHeight := 100;
   FBorderColor := clBlack;
   FBorderWidth := 1;
   FBrushStyle := bsSolid;
@@ -680,17 +699,7 @@ end;
 
 function TFsRectangle.GetEmpty: Boolean;
 begin
-  Result := FWidth * FHeight = 0;
-end;
-
-function TFsRectangle.GetHeight: Integer;
-begin
-  Result := FHeight;
-end;
-
-function TFsRectangle.GetWidth: Integer;
-begin
-  Result := FWidth;
+  Result := False;
 end;
 
 function TFsRectangle.HorzSafeStretch: Boolean;
@@ -734,25 +743,51 @@ begin
   end;
 end;
 
-procedure TFsRectangle.SetHeight(const Value: Integer);
-begin
-  if (FHeight <> Value) and (Value >= 0) then
-  begin
-    FHeight := Value;
-    Self.DoChange(niChange);
-  end;
-end;
-
-procedure TFsRectangle.SetWidth(const Value: Integer);
-begin
-  if (FWidth <> Value) and (Value >= 0) then
-  begin
-    FWidth := Value;
-    Self.DoChange(niChange);
-  end;
-end;
-
 function TFsRectangle.VertSafeStretch: Boolean;
+begin
+  Result := True;
+end;
+
+{ TFsGradientDrawer }
+
+procedure TFsGradientDrawer.Draw(ACanvas: TCanvas; const Rect: TRect);
+begin
+  GradientFillRect(ACanvas.Handle, Rect, FTopLeftColor, FBottomRightColor, FVertical);
+end;
+
+function TFsGradientDrawer.HorzSafeStretch: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TFsGradientDrawer.SetBottomRightColor(const Value: TColor);
+begin
+  if FBottomRightColor <> Value then
+  begin
+    FBottomRightColor := Value;
+    DoChange(niChange);
+  end;
+end;
+
+procedure TFsGradientDrawer.SetTopLeftColor(const Value: TColor);
+begin
+  if FTopLeftColor <> Value then
+  begin
+    FTopLeftColor := Value;
+    DoChange(niChange);
+  end;
+end;
+
+procedure TFsGradientDrawer.SetVertical(const Value: Boolean);
+begin
+  if FVertical <> Value then
+  begin
+    FVertical := Value;
+    DoChange(niChange);
+  end;
+end;
+
+function TFsGradientDrawer.VertSafeStretch: Boolean;
 begin
   Result := True;
 end;
