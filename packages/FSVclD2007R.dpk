@@ -41,6 +41,7 @@ contains
   FSStdCtrls in '..\src\FSStdCtrls.pas',
   FSTheme in '..\src\FSTheme.pas',
   FSTrayIcon in '..\src\FSTrayIcon.pas',
-  FSVclBase in '..\src\FSVclBase.pas';
+  FSVclBase in '..\src\FSVclBase.pas',
+  FSSkinCtrls in '..\src\FSSkinCtrls.pas';
 
 end.

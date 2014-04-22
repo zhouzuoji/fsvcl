@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms, Grids,
   Dialogs, FSGraphics, FSStdCtrls, StdCtrls, ExtCtrls, ComCtrls, FSScrollControls, FSVclBase, FSNavTree,
-  FsControls;
+  FsControls, acPNG;
 
 type
   TForm1 = class(TForm)
@@ -27,6 +27,9 @@ type
     TabSheet4: TTabSheet;
     FsTreeView1: TFsTreeView;
     FsFlatScrollBar1: TFsFlatScrollBar;
+    FsButton3: TFsCoverButton;
+    ndpCover: TFsPictureDrawable;
+    FsButton2: TFsCoverButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
   private
@@ -78,6 +81,7 @@ var
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
+  TabSheet1.DoubleBuffered := True;
   TITLE_BAR_HEIGHT := npdTopBorder.Height;
   LEFT_BORDER_WIDTH := npdLeftBorder.Width;
   RIGHT_BORDER_WIDTH := npdRightBorder.Width;

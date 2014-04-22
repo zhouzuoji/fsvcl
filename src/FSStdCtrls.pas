@@ -34,7 +34,6 @@ type
 
   TFsCustomButton = class(TFsGraphicControl)
   private
-    FMouseFlag: TMouseFlag;
     FShowCaption: Boolean;
     FLayout: TFsImageButtonLayout;
     FSpace: Integer;
@@ -55,6 +54,7 @@ type
     procedure SetGroup(const Value: Integer);
     procedure SetAllowDown(const Value: Boolean);
   protected
+    FMouseFlag: TMouseFlag;
     procedure SetOtherUp;
     procedure DrawImageAndText;
     procedure GetContentDimension(out dim: TSize); override;
@@ -147,33 +147,6 @@ type
     property Picture: TPicture read FPicture write SetPicture;
     property HoverCover: TFsDrawable read FHoverCover write SetHoverCover;
     property DownCover: TFsDrawable read FDownCover write SetDownCover;
-  end;
-
-  TFsSkinButton = class(TFsCustomButton)
-  private
-    FPicture: TFsDrawable;
-    FDisablePicture: TFsDrawable;
-    FMouseOverPicture: TFsDrawable;
-    FMouseDownPicture: TFsDrawable;
-    procedure PictureChanged(Sender: TObject; ID: TNotifyID);
-    procedure SetPicture(const Value: TFsDrawable);
-    procedure SetMouseDownPicture(const Value: TFsDrawable);
-    procedure SetMouseOverPicture(const Value: TFsDrawable);
-    procedure SetDisablePicture(const Value: TFsDrawable);
-    function GetDrawable: TFsDrawable;
-  protected
-    function GetPictureSize(out width: Integer): Integer; override;
-    procedure DrawPicture(const Rect: TRect); override;
-  public
-    destructor Destroy; override;
-  published
-    property AllowDown;
-    property Down;
-    property Group;
-    property Picture: TFsDrawable read FPicture write SetPicture;
-    property DisablePicture: TFsDrawable read FDisablePicture write SetDisablePicture;
-    property MouseOverPicture: TFsDrawable read FMouseOverPicture write SetMouseOverPicture;
-    property MouseDownPicture: TFsDrawable read FMouseDownPicture write SetMouseDownPicture;
   end;
 
   TFsMemo = class(TFsScrollContainer)
@@ -591,10 +564,6 @@ type
   published
     property CheckedPicture: TPicture read GetCheckedPicture write SetCheckedPicture;
     property UnCheckedPicture: TPicture read GetUnCheckedPicture write SetUnCheckedPicture;
-  end;
-
-  TFsSkinCheckBox = class(TFsCustomCheckBox)
-  
   end;
 
 implementation
@@ -2612,159 +2581,6 @@ begin
 
   with msgr.CalcSize_Params.rgrc[0] do
     OutputDebugString(PChar(Format('%d, %d, %d, %d', [Left, Top, Right, Bottom])));
-end;
-
-{ TFsSkinButton }
-
-destructor TFsSkinButton.Destroy;
-begin
-  SetPicture(nil);
-  SetMouseDownPicture(nil);
-  SetMouseOverPicture(nil);
-  SetDisablePicture(nil);
-  inherited;
-end;
-
-procedure TFsSkinButton.DrawPicture(const Rect: TRect);
-var
-  drawable: TFsDrawable;
-begin
-  drawable := Self.GetDrawable;
-
-  if Assigned(drawable) then
-  begin
-    if drawable is TFsSingleDrawable then
-      TFsSingleDrawable(drawable).Draw(Self.Canvas, Rect)
-    else if drawable is TFsMultiFrameDrawable then
-      TFsMultiFrameDrawable(drawable).DrawFrame(Canvas.Handle, Rect, 0);
-  end;
-end;
-
-function TFsSkinButton.GetDrawable: TFsDrawable;
-begin
-  if not Self.Enabled then Result := FDisablePicture
-  else if FAllowDown and FDown then Result := FMouseDownPicture       
-  else if mfLButtonDown in FMouseFlag then Result := FMouseDownPicture
-  else if mfMouseOver in FMouseFlag then Result := FMouseOverPicture
-  else Result := FPicture;
-
-  if not Assigned(Result) or Result.Empty then
-    Result := FPicture;
-end;
-
-function TFsSkinButton.GetPictureSize(out width: Integer): Integer;
-var
-  drawable: TFsDrawable;
-begin
-  drawable := Self.GetDrawable;
-
-  if Assigned(drawable) and not drawable.Empty then
-  begin
-    width := drawable.Width;
-    Result := drawable.Height;
-  end
-  else begin
-    width := 0;
-    Result := 0;
-  end;
-end;
-
-procedure TFsSkinButton.PictureChanged(Sender: TObject; ID: TNotifyID);
-begin
-  if ID = niDestroy then
-  begin
-    if Sender = FPicture then
-    begin
-      FPicture := nil;
-      Self.AutoSizeAndInvalidate;
-    end;
-
-    if Sender = FDisablePicture then
-    begin
-      FDisablePicture := nil;
-      Self.AutoSizeAndInvalidate;
-    end;
-
-    if Sender = FMouseOverPicture then
-    begin
-      FMouseOverPicture := nil;
-      Self.AutoSizeAndInvalidate;
-    end;
-
-    if Sender = FMouseDownPicture then
-    begin
-      FMouseDownPicture := nil;
-      Self.AutoSizeAndInvalidate;
-    end;
-  end
-  else if ID = niChange then
-  begin
-    if Sender = GetDrawable then Self.AutoSizeAndInvalidate;
-  end;
-end;
-
-procedure TFsSkinButton.SetDisablePicture(const Value: TFsDrawable);
-begin
-  if FDisablePicture <> Value then
-  begin
-    if Assigned(FDisablePicture) then
-      FDisablePicture.RemoveOnChangeListener(Self.PictureChanged);
-
-    FDisablePicture := Value;
-
-    if Assigned(FDisablePicture) then
-      FDisablePicture.AddOnChangeListener(Self.PictureChanged);
-      
-    Self.AutoSizeAndInvalidate;
-  end;
-end;
-
-procedure TFsSkinButton.SetMouseDownPicture(const Value: TFsDrawable);
-begin
-  if FMouseDownPicture <> Value then
-  begin
-    if Assigned(FMouseDownPicture) then
-      FMouseDownPicture.RemoveOnChangeListener(Self.PictureChanged);
-
-    FMouseDownPicture := Value;
-
-    if Assigned(FMouseDownPicture) then
-      FMouseDownPicture.AddOnChangeListener(Self.PictureChanged);
-      
-    Self.AutoSizeAndInvalidate;
-  end;
-end;
-
-procedure TFsSkinButton.SetMouseOverPicture(const Value: TFsDrawable);
-begin
-  if FMouseOverPicture <> Value then
-  begin
-    if Assigned(FMouseOverPicture) then
-      FMouseOverPicture.RemoveOnChangeListener(Self.PictureChanged);
-
-    FMouseOverPicture := Value;
-
-    if Assigned(FMouseOverPicture) then
-      FMouseOverPicture.AddOnChangeListener(Self.PictureChanged);
-      
-    Self.AutoSizeAndInvalidate;
-  end;
-end;
-
-procedure TFsSkinButton.SetPicture(const Value: TFsDrawable);
-begin
-  if FPicture <> Value then
-  begin
-    if Assigned(FPicture) then
-      FPicture.RemoveOnChangeListener(Self.PictureChanged);
-
-    FPicture := Value;
-
-    if Assigned(FPicture) then
-      FPicture.AddOnChangeListener(Self.PictureChanged);
-      
-    Self.AutoSizeAndInvalidate;
-  end;
 end;
 
 end.
