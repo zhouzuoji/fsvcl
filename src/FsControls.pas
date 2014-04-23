@@ -93,7 +93,6 @@ type
     function NeedScrollBar(out HScroll: Boolean): Boolean;
     procedure GetScrollInfo(var fsi: TFsScrollInfo; var vsi, hsi: TScrollInfo; const r: TRect);
     function ScrollHitTest(X, Y: Integer): TScrollHitTest;
-    procedure NCChanged;
     procedure ClipEdge(var r: TRect);
     procedure CheckScrollBarCapture(X, Y: Integer);
     procedure CheckScrollBarCaptureMouseUp(X, Y: Integer);
@@ -134,6 +133,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure PaintNC;
+    procedure NCChanged;
     procedure SetScrollRange(IsVert: Boolean; nMin, nMax, nPage: Integer);
     procedure SetScrollPos(IsVert: Boolean; nPos: Integer);
     property ParentBackground;
@@ -1081,13 +1081,13 @@ end;
 
 procedure TFsCustomControl.WMEraseBkgnd(var msgr: TWMEraseBkgnd);
 begin
-  if ParentBackground and Assigned(Parent) then
+  if not FDoubleBuffered or (msgr.DC = HDC(msgr.Unused)) then
   begin
-    if Parent.DoubleBuffered then PerformEraseBackground(Self, msgr.DC)
-    else ThemeServices.DrawParentBackground(Handle, msgr.DC, nil, False);
-  end
-  else if not FDoubleBuffered or (msgr.DC = HDC(msgr.Unused)) then
-    Windows.FillRect(msgr.DC, ClientRect, Self.Brush.Handle);
+    if ParentBackground and Assigned(Parent) then
+      ThemeServices.DrawParentBackground(Handle, msgr.DC, nil, False)
+    else
+      Windows.FillRect(msgr.DC, ClientRect, Self.Brush.Handle);
+  end;
 
   msgr.Result := 1;
 end;

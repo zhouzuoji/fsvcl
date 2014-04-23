@@ -32,13 +32,13 @@
     <DelphiCompile Include="FSVclD2007Dsg.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
+    <DCCReference Include="..\designide.dcp" />
+    <DCCReference Include="..\FSVclD2007R.dcp" />
+    <DCCReference Include="..\rtl.dcp" />
     <DCCReference Include="..\src\FSVclRegister.pas" />
-    <DCCReference Include="D:\MyDesktop\designide.dcp" />
-    <DCCReference Include="D:\MyDesktop\FSVclD2007R.dcp" />
-    <DCCReference Include="D:\MyDesktop\rtl.dcp" />
-    <DCCReference Include="D:\MyDesktop\vcl.dcp" />
-    <DCCReference Include="D:\MyDesktop\vclactnband.dcp" />
-    <DCCReference Include="D:\MyDesktop\vclx.dcp" />
-    <DCCReference Include="D:\MyDesktop\xmlrtl.dcp" />
+    <DCCReference Include="..\vcl.dcp" />
+    <DCCReference Include="..\vclactnband.dcp" />
+    <DCCReference Include="..\vclx.dcp" />
+    <DCCReference Include="..\xmlrtl.dcp" />
   </ItemGroup>
 </Project>
