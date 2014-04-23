@@ -137,7 +137,6 @@ type
     procedure SetScrollRange(IsVert: Boolean; nMin, nMax, nPage: Integer);
     procedure SetScrollPos(IsVert: Boolean; nPos: Integer);
     property ParentBackground;
-    property ParentCtl3D;
   end;
 
 function NeedScroll(const si: TScrollInfo): Boolean; inline;

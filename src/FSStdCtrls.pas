@@ -335,17 +335,25 @@ type
   
   TFsEdit = class(TCustomEdit)
   private
-    FMouseInBorderColor: TColor;
-    procedure SetMouseInBorderColor(const Value: TColor);
+    FBorderColorHover: TColor;
+    FBorderColor: TColor;
+    FBorderWidth: Integer;
+    procedure SetBorderColorHover(const Value: TColor);
+    procedure SetBorderColor(const Value: TColor);
+    procedure SetBorderWidth(const Value: Integer);
   protected
     FMouseIn: Boolean;
+    procedure NCChanged;
     procedure CMMouseEnter(var msgr: TMessage); message CM_MOUSEENTER;
     procedure CMMouseLeave(var msgr: TMessage); message CM_MOUSELEAVE;
+    procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
     procedure WMNCPAINT(var msgr: TWMNCPaint); message WM_NCPAINT;
+    property BorderWidth: Integer read FBorderWidth write SetBorderWidth;
   public
     constructor Create(AOwner: TComponent); override;
   published
-    property MouseInBorderColor: TColor read FMouseInBorderColor write SetMouseInBorderColor;
+    property BorderColor: TColor read FBorderColor write SetBorderColor;
+    property BorderColorHover: TColor read FBorderColorHover write SetBorderColorHover;
     property Align;
     property Anchors;
     property AutoSelect;
@@ -360,7 +368,6 @@ type
     property CharCase;
     property Color;
     property Constraints;
-    property Ctl3D;
     property DoubleBuffered;
     property DragCursor;
     property DragKind;
@@ -374,7 +381,6 @@ type
     property OEMConvert;
     property ParentBiDiMode;
     property ParentColor;
-    property ParentCtl3D;
     property ParentFont;
     property ParentShowHint;
     property PasswordChar;
@@ -408,28 +414,40 @@ type
     property OnStartDrag;
   end;
 
-  TFsButtonEdit = class(TFsEdit)
+  TFsCustomButtonEdit = class(TFsEdit)
   private
-    FOnClickButton: TNotifyEvent;
     FButtonPicture: TPicture;
-    procedure WriteButtonPicture(const Value: TPicture);
+    FSpace: Integer;
+    procedure SetButtonPicture(const Value: TPicture);
+    procedure SetSpace(const Value: Integer);
   protected
     FNCCanvas: TCanvas;
     procedure WMNCPAINT(var msgr: TWMNCPaint); message WM_NCPAINT;
-    procedure WMNCLButtonDown(var msgr: TWMNCLButtonDown); message WM_NCLBUTTONDOWN;
     procedure WMNCHitTest(var msgr: TWMNCHitTest); message WM_NCHITTEST;
+    procedure WMNCLButtonDown(var msgr: TWMNCLButtonDown); message WM_NCLBUTTONDOWN;
     procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
+    procedure DoClickButton; virtual; abstract;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    property ButtonPicture: TPicture read FButtonPicture write SetButtonPicture;
+    property Space: Integer read FSpace write SetSpace;
+  end;
+
+  TFsButtonEdit = class(TFsCustomButtonEdit)
+  private
+    FOnClickButton: TNotifyEvent;
+  protected
+    procedure DoClickButton; override;
   published
-    property ButtonPicture: TPicture read FButtonPicture write WriteButtonPicture;
+    property ButtonPicture;
+    property Space;
     property OnClickButton: TNotifyEvent read FOnClickButton write FOnClickButton;
   end;
 
   TFsNCScrollMemo = class(TCustomMemo)
   private
-    FMouseInBorderColor: TColor;
+    FBorderColorHover: TColor;
     FMouseIn: Boolean;
     FScrollBar: TFsCustomScrollBar;
     procedure PaintNC;
@@ -439,7 +457,7 @@ type
     procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
     procedure WMNCHitTest(var msgr: TWMNCHitTest); message WM_NCHITTEST;
     procedure WMNCLButtonDown(var msgr: TWMNCLButtonDown); message WM_NCLBUTTONDOWN;
-    procedure SetMouseInBorderColor(const Value: TColor);
+    procedure SetBorderColorHover(const Value: TColor);
     procedure SetScrollBar(const Value: TFsCustomScrollBar);
     function GetRealScrollBar: TFsCustomScrollBar;
   protected
@@ -452,7 +470,7 @@ type
     constructor Create(AOwner: TComponent); override;
   published
     property ScrollBar: TFsCustomScrollBar read FScrollBar write SetScrollBar;
-    property MouseInBorderColor: TColor read FMouseInBorderColor write SetMouseInBorderColor;
+    property BorderColorHover: TColor read FBorderColorHover write SetBorderColorHover;
     property Align;
     property Alignment;
     property Anchors;
@@ -918,7 +936,7 @@ begin
 
   Self.GetPictureSize(w);
 
-  if w > 0 then Self.DrawPicture(r);
+  if w <> 0 then Self.DrawPicture(r);
 
   if FShowCaption then
   begin
@@ -1312,16 +1330,61 @@ end;
 constructor TFsEdit.Create(AOwner: TComponent);
 begin
   inherited;
-  FMouseInBorderColor := RGB(123, 228, 255);
+  Self.ParentCtl3D := False;
+  Self.Ctl3D := True;
+  FBorderWidth := 1;
+  FBorderColorHover := RGB(123, 228, 255);
+  FBorderColor := RGB(78, 160, 209);
 end;
 
-procedure TFsEdit.SetMouseInBorderColor(const Value: TColor);
+procedure TFsEdit.NCChanged;
 begin
-  if FMouseInBorderColor <> Value then
+  if HandleAllocated then
   begin
-    FMouseInBorderColor := Value;
+    SetWindowPos(Handle, 0, 0,0,0,0, SWP_NOACTIVATE or
+    SWP_NOZORDER or SWP_NOMOVE or SWP_NOSIZE or SWP_FRAMECHANGED);
+
+    if Visible then Self.Invalidate;
+  end;
+end;
+
+procedure TFsEdit.SetBorderColor(const Value: TColor);
+begin
+  if FBorderColor <> Value then
+  begin
+    FBorderColor := Value;
     Self.Invalidate;
   end;
+end;
+
+procedure TFsEdit.SetBorderColorHover(const Value: TColor);
+begin
+  if FBorderColorHover <> Value then
+  begin
+    FBorderColorHover := Value;
+    Self.Invalidate;
+  end;
+end;
+
+procedure TFsEdit.SetBorderWidth(const Value: Integer);
+begin
+  if (FBorderWidth <> Value) and (Value >= 0) then
+  begin
+    FBorderWidth := Value;
+    Self.NCChanged;
+  end;
+end;
+
+procedure TFsEdit.WMNCCalcSize(var msgr: TWMNCCalcSize);
+var
+  pr: PRect;
+begin
+  pr := @msgr.CalcSize_Params.rgrc[0];
+  Inc(pr.Left, FBorderWidth);
+  Inc(pr.Top, FBorderWidth);
+  Dec(pr.Right, FBorderWidth);
+  Dec(pr.Bottom, FBorderWidth);
+  msgr.Result := 0;
 end;
 
 procedure TFsEdit.WMNCPAINT(var msgr: TWMNCPaint);
@@ -1333,19 +1396,11 @@ begin
   dc := GetWindowDC(Handle);
 
   try    
-    if FMouseIn then bgc := ColorToRGB(FMouseInBorderColor)
-    else bgc := RGB(78, 160, 209);
+    if FMouseIn then bgc := ColorToRGB(FBorderColorHover)
+    else bgc := ColorToRGB(FBorderColor);
     
     hb := CreateSolidBrush(bgc);
     Windows.FrameRect(dc, Rect(0, 0, Self.Width, Self.Height), hb);
-    DeleteObject(hb);
-
-    if FMouseIn then bgc := RGB(78, 160, 209)
-    else bgc := ColorToRGB(Self.Color);
-    
-    hb := CreateSolidBrush(bgc);
-    Windows.FrameRect(dc, Rect(1, 1, Self.Width - 1, Self.Height - 1), hb);
-    DeleteObject(hb);
 
     msgr.Result := 0;
   finally
@@ -1541,95 +1596,115 @@ begin
   FUnCheckedPicture.Picture.Assign(Value);
 end;
 
-{ TFsButtonEdit }
+{ TFsCustomButtonEdit }
 
-constructor TFsButtonEdit.Create(AOwner: TComponent);
+constructor TFsCustomButtonEdit.Create(AOwner: TComponent);
 begin
   inherited;
   FButtonPicture := TPicture.Create;
   FNCCanvas := TCanvas.Create;
 end;
 
-destructor TFsButtonEdit.Destroy;
+destructor TFsCustomButtonEdit.Destroy;
 begin
   FButtonPicture.Free;
   FNCCanvas.Free;
   inherited;
 end;
 
-procedure TFsButtonEdit.WMNCCalcSize(var msgr: TWMNCCalcSize);
+procedure TFsCustomButtonEdit.SetSpace(const Value: Integer);
 begin
-  with msgr.CalcSize_Params^ do
+  if (FSpace <> Value) and (Value >= 0) then
   begin
-    rgrc[0].Left := rgrc[0].Left + 2;
-    rgrc[0].Top := rgrc[0].Top + 2;
-    rgrc[0].Right := rgrc[0].Right - 2 - FButtonPicture.Width;
-    rgrc[0].Bottom := rgrc[0].Bottom - 2;
+    FSpace := Value;
+    Self.NCChanged; 
   end;
+end;
+
+procedure TFsCustomButtonEdit.WMNCCalcSize(var msgr: TWMNCCalcSize);
+var
+  pr: PRect;
+begin
+  inherited;
+
+  pr := @msgr.CalcSize_Params.rgrc[0];
+
+  if Assigned(FButtonPicture.Graphic) and not FButtonPicture.Graphic.Empty then
+    Dec(pr.Right, FButtonPicture.Width + FSpace);
 
   msgr.Result := 0;
 end;
 
-procedure TFsButtonEdit.WMNCHitTest(var msgr: TWMNCHitTest);
+procedure TFsCustomButtonEdit.WMNCHitTest(var msgr: TWMNCHitTest);
 var
   pt: TPoint;
+  r, rc: TRect;
 begin
-  pt := Self.ScreenToClient(Point(msgr.XPos, msgr.YPos));
+  if FButtonPicture.Width > 0 then
+  begin
+    pt.X := msgr.XPos;
+    pt.Y := msgr.YPos;
+    Windows.ScreenToClient(Handle, pt);
+    Windows.GetClientRect(Handle, rc);
 
-  if PtInRect(Rect(Self.Width - 2 - FButtonPicture.Width, 2, Self.Width - 2, Self.Height - 2), pt) then msgr.Result := HTBORDER
+    r.Left := rc.Right;
+    r.Right := r.Left + Self.Space + FButtonPicture.Width;
+    r.Top := rc.Top;
+    r.Bottom := rc.Bottom;
+
+    if PtInRect(r, pt) then msgr.Result := HTOBJECT
+    else inherited;
+  end
   else inherited;
 end;
 
-procedure TFsButtonEdit.WMNCLButtonDown(var msgr: TWMNCLButtonDown);
-var
-  pt: TPoint;
+procedure TFsCustomButtonEdit.WMNCLButtonDown(var msgr: TWMNCLButtonDown);
 begin
-  pt := Self.ScreenToClient(Point(msgr.XCursor, msgr.YCursor));
-
-  if PtInRect(Rect(Self.Width - 2 - FButtonPicture.Width, 2, Self.Width - 2, Self.Height - 2), pt) then
+  if msgr.HitTest = HTOBJECT then
   begin
-    if Assigned(FOnClickButton) then
-      FOnClickButton(Self);
-
+    Self.DoClickButton;
     msgr.Result := 0;
   end
   else inherited;
 end;
 
-procedure TFsButtonEdit.WMNCPAINT(var msgr: TWMNCPaint);
+procedure TFsCustomButtonEdit.WMNCPAINT(var msgr: TWMNCPaint);
 var
   dc: HDC;
   r: TRect;
 begin
   inherited;
 
-  r.Left := Self.Width - 2 - FButtonPicture.Width;
-  r.Right := Self.Width - 2;
+  if Assigned(FButtonPicture.Graphic) and not FButtonPicture.Graphic.Empty then
+  begin
+    r.Left := Self.Width - BorderWidth - FSpace - FButtonPicture.Width;
+    r.Right := Self.Width - BorderWidth;
 
-  r.Top := (Self.Height - FButtonPicture.Height) div 2;
-  r.Bottom := Self.Height - r.Top;
+    r.Top := (Self.Height - FButtonPicture.Height) div 2;
+    r.Bottom := Self.Height - r.Top;
 
-  dc := GetWindowDC(Self.Handle);
-  
-  FNCCanvas.Handle := dc;
+    dc := GetWindowDC(Self.Handle);
 
-  try
-    FNCCanvas.Brush.Color := Self.Color;
-    FNCCanvas.FillRect(Rect(r.Left, 2, r.Right, Self.Height - 2));
-    
-    if Assigned(FButtonPicture.Graphic) then
-      FNCCanvas.StretchDraw(r, FButtonPicture.Graphic);
+    FNCCanvas.Handle := dc;
 
-    msgr.Result := 0;
-  finally
-    FNCCanvas.Handle := 0;
-    ReleaseDC(Self.Handle, dc);
-  end;  
+    try
+      FNCCanvas.Brush.Color := Self.Color;
+      FNCCanvas.FillRect(Rect(r.Left, BorderWidth, r.Right, Self.Height - BorderWidth));
+
+      FNCCanvas.Draw(r.Left + FSpace shr 1, r.Top, FButtonPicture.Graphic);
+
+      msgr.Result := 0;
+    finally
+      FNCCanvas.Handle := 0;
+      ReleaseDC(Self.Handle, dc);
+    end;
+  end;
 end;
 
-procedure TFsButtonEdit.WriteButtonPicture(const Value: TPicture);
+procedure TFsCustomButtonEdit.SetButtonPicture(const Value: TPicture);
 begin
   FButtonPicture.Assign(Value);
+  Self.NCChanged;
 end;
 
 { TFsNCScrollMemo }
@@ -1649,7 +1724,7 @@ end;
 constructor TFsNCScrollMemo.Create(AOwner: TComponent);
 begin
   inherited;
-  FMouseInBorderColor := RGB(123, 228, 255);
+  FBorderColorHover := RGB(123, 228, 255);
 end;
 
 function TFsNCScrollMemo.GetHScrollRect(var rc: TRect): Boolean;
@@ -1768,7 +1843,7 @@ begin
   dc := GetWindowDC(Handle);
 
   try
-    if FMouseIn then bgc := ColorToRGB(FMouseInBorderColor)
+    if FMouseIn then bgc := ColorToRGB(FBorderColorHover)
     else bgc := RGB(78, 160, 209);
 
     r.Left := 0;
@@ -1820,11 +1895,11 @@ begin
   end;
 end;
 
-procedure TFsNCScrollMemo.SetMouseInBorderColor(const Value: TColor);
+procedure TFsNCScrollMemo.SetBorderColorHover(const Value: TColor);
 begin
-  if FMouseInBorderColor <> Value then
+  if FBorderColorHover <> Value then
   begin
-    FMouseInBorderColor := Value;
+    FBorderColorHover := Value;
     Self.Invalidate;
   end;
 end;
@@ -2581,6 +2656,13 @@ begin
 
   with msgr.CalcSize_Params.rgrc[0] do
     OutputDebugString(PChar(Format('%d, %d, %d, %d', [Left, Top, Right, Bottom])));
+end;
+
+{ TFsButtonEdit }
+
+procedure TFsButtonEdit.DoClickButton;
+begin
+  if Assigned(FOnClickButton) then FOnClickButton(Self);
 end;
 
 end.

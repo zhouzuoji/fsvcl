@@ -14,7 +14,7 @@ type
     procedure DoChange(ID: TNotifyID);
     function GetHeight: Integer; virtual;
     function GetWidth: Integer; virtual;
-    function GetEmpty: Boolean; virtual; abstract;
+    function GetEmpty: Boolean; virtual; 
   public
     constructor Create(Owner: TComponent); override;
     destructor Destroy; override;
@@ -34,31 +34,39 @@ type
     procedure Draw(ACanvas: TCanvas; const Rect: TRect); virtual; abstract;
   end;
 
-  TFsRectangle = class(TFsSingleDrawable)
+  TFsSVGDrawable = class(TFsSingleDrawable)
   private
     FBorderColor: TColor;
-    FColor: TColor;
     FBorderWidth: Integer;
+    FColor: TColor;
     FBrushStyle: TBrushStyle;
-    procedure SetBorderWidth(const Value: Integer);
-    procedure SetColor(const Value: TColor);
     procedure SetBorderColor(const Value: TColor);
+    procedure SetBorderWidth(const Value: Integer);
     procedure SetBrushStyle(const Value: TBrushStyle);
+    procedure SetColor(const Value: TColor);
   protected
     function GetEmpty: Boolean; override;
-  public
-    constructor Create(AOwner: TComponent); override;
-    function HorzSafeStretch: Boolean; override;
-    function VertSafeStretch: Boolean; override;
-    procedure Draw(ACanvas: TCanvas; const Rect: TRect); override;
-  published
     property BrushStyle: TBrushStyle read FBrushStyle write SetBrushStyle;
     property Color: TColor read FColor write SetColor;
     property BorderWidth: Integer read FBorderWidth write SetBorderWidth;
     property BorderColor: TColor read FBorderColor write SetBorderColor;
+  public
+    function HorzSafeStretch: Boolean; override;
+    function VertSafeStretch: Boolean; override;
+    procedure Draw(ACanvas: TCanvas; const Rect: TRect); override;
   end;
 
-  TFsGradientDrawer = class(TFsSingleDrawable)
+  TFsRectangle = class(TFsSVGDrawable)
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property BrushStyle;
+    property Color;
+    property BorderWidth;
+    property BorderColor;
+  end;
+
+  TFsGradientDrawer = class(TFsSVGDrawable)
   private
     FTopLeftColor: TColor;
     FBottomRightColor: TColor;
@@ -66,15 +74,17 @@ type
     procedure SetBottomRightColor(const Value: TColor);
     procedure SetTopLeftColor(const Value: TColor);
     procedure SetVertical(const Value: Boolean);
-  published
   public
-    function HorzSafeStretch: Boolean; override;
-    function VertSafeStretch: Boolean; override;
+    constructor Create(AOwner: TComponent); override;
     procedure Draw(ACanvas: TCanvas; const Rect: TRect); override;
   published
-    property Vertical: Boolean read FVertical write SetVertical;
-    property TopLeftColor: TColor read FTopLeftColor write SetTopLeftColor;
-    property BottomRightColor: TColor read FBottomRightColor write SetBottomRightColor;
+    property BrushStyle;
+    property Color;
+    property BorderWidth;
+    property BorderColor;
+    property Vertical: Boolean read FVertical write SetVertical default True;
+    property TopLeftColor: TColor read FTopLeftColor write SetTopLeftColor default $ffffff;
+    property BottomRightColor: TColor read FBottomRightColor write SetBottomRightColor default $e9e9e9;
   end;
 
   TFsMultiFrameDrawable = class(TFsDrawable)
@@ -591,6 +601,11 @@ begin
   if FUpdateCount = 0 then DoChange(niChange);
 end;
 
+function TFsDrawable.GetEmpty: Boolean;
+begin
+  Result := True;
+end;
+
 function TFsDrawable.GetHeight: Integer;
 begin
   Result := -1;
@@ -682,82 +697,33 @@ end;
 constructor TFsRectangle.Create(AOwner: TComponent);
 begin
   inherited;
-  FBorderColor := clBlack;
-  FBorderWidth := 1;
-  FBrushStyle := bsSolid;
-  FColor := clBtnFace;
-end;
-
-procedure TFsRectangle.Draw(ACanvas: TCanvas; const Rect: TRect);
-begin
-  ACanvas.Brush.Style := Self.FBrushStyle;
-  ACanvas.Brush.Color := Self.FColor;
-  ACanvas.Pen.Width := Self.FBorderWidth;
-  ACanvas.Pen.Color := Self.FBorderColor;
-  ACanvas.Rectangle(Rect);
-end;
-
-function TFsRectangle.GetEmpty: Boolean;
-begin
-  Result := False;
-end;
-
-function TFsRectangle.HorzSafeStretch: Boolean;
-begin
-  Result := True;
-end;
-
-procedure TFsRectangle.SetBorderColor(const Value: TColor);
-begin
-  if FBorderColor <> Value then
-  begin
-    FBorderColor := Value;
-    DoChange(niChange);
-  end;
-end;
-
-procedure TFsRectangle.SetBorderWidth(const Value: Integer);
-begin
-  if (FBorderWidth <> Value) and (Value >= 0) then
-  begin
-    FBorderWidth := Value;
-    DoChange(niChange);
-  end;
-end;
-
-procedure TFsRectangle.SetBrushStyle(const Value: TBrushStyle);
-begin
-  if FBrushStyle <> Value then
-  begin
-    FBrushStyle := Value;
-    DoChange(niChange);
-  end;
-end;
-
-procedure TFsRectangle.SetColor(const Value: TColor);
-begin
-  if FColor <> Value then
-  begin
-    FColor := Value;
-    DoChange(niChange);
-  end;
-end;
-
-function TFsRectangle.VertSafeStretch: Boolean;
-begin
-  Result := True;
+  BorderColor := clBlack;
+  BorderWidth := 1;
+  BrushStyle := bsSolid;
+  Color := clBtnFace;
 end;
 
 { TFsGradientDrawer }
 
-procedure TFsGradientDrawer.Draw(ACanvas: TCanvas; const Rect: TRect);
+constructor TFsGradientDrawer.Create(AOwner: TComponent);
 begin
-  GradientFillRect(ACanvas.Handle, Rect, FTopLeftColor, FBottomRightColor, FVertical);
+  inherited;
+  FVertical := True;
+  FTopLeftColor := $ffffff;
+  FBottomRightColor := $e9e9e9;
 end;
 
-function TFsGradientDrawer.HorzSafeStretch: Boolean;
+procedure TFsGradientDrawer.Draw(ACanvas: TCanvas; const Rect: TRect);
+var
+  r: TRect;
 begin
-  Result := True;
+  inherited;
+
+  r.Left := Rect.Left + BorderWidth;
+  r.Right := Rect.Right - BorderWidth;
+  r.Top := Rect.Top + BorderWidth;
+  r.Bottom := Rect.Bottom - BorderWidth;
+  GradientFillRect(ACanvas.Handle, r, FTopLeftColor, FBottomRightColor, FVertical);
 end;
 
 procedure TFsGradientDrawer.SetBottomRightColor(const Value: TColor);
@@ -787,7 +753,64 @@ begin
   end;
 end;
 
-function TFsGradientDrawer.VertSafeStretch: Boolean;
+{ TFsSVGDrawable }
+
+procedure TFsSVGDrawable.Draw(ACanvas: TCanvas; const Rect: TRect);
+begin
+  ACanvas.Brush.Style := Self.FBrushStyle;
+  ACanvas.Brush.Color := Self.FColor;
+  ACanvas.Pen.Width := Self.FBorderWidth;
+  ACanvas.Pen.Color := Self.FBorderColor;
+  ACanvas.Rectangle(Rect);
+end;
+
+function TFsSVGDrawable.GetEmpty: Boolean;
+begin
+  Result := False;
+end;
+
+function TFsSVGDrawable.HorzSafeStretch: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TFsSVGDrawable.SetBorderColor(const Value: TColor);
+begin
+  if FBorderColor <> Value then
+  begin
+    FBorderColor := Value;
+    DoChange(niChange);
+  end;
+end;
+
+procedure TFsSVGDrawable.SetBorderWidth(const Value: Integer);
+begin
+  if (FBorderWidth <> Value) and (Value >= 0) then
+  begin
+    FBorderWidth := Value;
+    DoChange(niChange);
+  end;
+end;
+
+procedure TFsSVGDrawable.SetBrushStyle(const Value: TBrushStyle);
+begin
+  if FBrushStyle <> Value then
+  begin
+    FBrushStyle := Value;
+    DoChange(niChange);
+  end;
+end;
+
+procedure TFsSVGDrawable.SetColor(const Value: TColor);
+begin
+  if FColor <> Value then
+  begin
+    FColor := Value;
+    DoChange(niChange);
+  end;
+end;
+
+function TFsSVGDrawable.VertSafeStretch: Boolean;
 begin
   Result := True;
 end;
