@@ -445,6 +445,17 @@ type
     property OnClickButton: TNotifyEvent read FOnClickButton write FOnClickButton;
   end;
 
+  TFsCombobox = class(TFsCustomButtonEdit)
+  private
+    FOnSelect: TNotifyEvent;
+  protected
+    procedure DoClickButton; override;
+  published
+    property ButtonPicture;
+    property Space;
+    property OnSelect: TNotifyEvent read FOnSelect write FOnSelect;
+  end;  
+
   TFsNCScrollMemo = class(TCustomMemo)
   private
     FBorderColorHover: TColor;
@@ -2634,14 +2645,13 @@ end;
 
 procedure TFsPanel.WMEraseBkgnd(var msgr: TWMEraseBkgnd);
 begin
-  if ParentBackground and Assigned(Parent) then
+  if not FDoubleBuffered or (msgr.DC = HDC(msgr.Unused)) then
   begin
-    if Parent.DoubleBuffered then PerformEraseBackground(Self, msgr.DC)
-    else ThemeServices.DrawParentBackground(Handle, msgr.DC, nil, False);
-  end
-  else if not FDoubleBuffered or (msgr.DC = HDC(msgr.Unused)) then
-    Windows.FillRect(msgr.DC, ClientRect, Self.Brush.Handle);
-
+    if ParentBackground and Assigned(Parent) then
+      ThemeServices.DrawParentBackground(Handle, msgr.DC, nil, False)
+    else
+      Windows.FillRect(msgr.DC, ClientRect, Self.Brush.Handle);
+  end;
   msgr.Result := 1;
 end;
 
@@ -2663,6 +2673,13 @@ end;
 procedure TFsButtonEdit.DoClickButton;
 begin
   if Assigned(FOnClickButton) then FOnClickButton(Self);
+end;
+
+{ TFsCombobox }
+
+procedure TFsCombobox.DoClickButton;
+begin
+
 end;
 
 end.
