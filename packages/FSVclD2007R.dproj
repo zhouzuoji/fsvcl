@@ -39,6 +39,9 @@
     <DCCReference Include="..\..\kehuda\client\src\vclx.dcp" />
     <DCCReference Include="..\..\kehuda\client\src\xmlrtl.dcp" />
     <DCCReference Include="..\src\FsControls.pas" />
+    <DCCReference Include="..\src\FSEmptyForm.pas">
+      <Form>EmptyForm</Form>
+    </DCCReference>
     <DCCReference Include="..\src\FSGraphics.pas" />
     <DCCReference Include="..\src\FSNavTree.pas" />
     <DCCReference Include="..\src\FSScrollControls.pas" />

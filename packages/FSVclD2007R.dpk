@@ -42,6 +42,7 @@ contains
   FSTheme in '..\src\FSTheme.pas',
   FSTrayIcon in '..\src\FSTrayIcon.pas',
   FSVclBase in '..\src\FSVclBase.pas',
-  FSSkinCtrls in '..\src\FSSkinCtrls.pas';
+  FSSkinCtrls in '..\src\FSSkinCtrls.pas',
+  FSEmptyForm in '..\src\FSEmptyForm.pas' {EmptyForm};
 
 end.

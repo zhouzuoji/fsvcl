@@ -4,7 +4,7 @@ interface
 
 uses
   SysUtils, Classes, Consts, Windows, Graphics, Controls, Messages, StdCtrls, ExtCtrls, ComCtrls,
-  FSVclBase, FSGraphics, FsControls, FSScrollControls, Themes;
+  Forms, FSVclBase, FSGraphics, FsControls, FSScrollControls, Themes;
 
 type
   TFsImage = class(TFsGraphicControl)
@@ -445,15 +445,39 @@ type
     property OnClickButton: TNotifyEvent read FOnClickButton write FOnClickButton;
   end;
 
-  TFsCombobox = class(TFsCustomButtonEdit)
+  TFsCombobox = class(TComboBox)
   private
-    FOnSelect: TNotifyEvent;
+    FSpace: Integer;
+    FButtonPicture: TPicture;
+    FMouseOver: Boolean;
+    FBorderColor: TColor;
+    FBorderColorHover: TColor;
+    procedure ButtonPictureChanged(Sender: TObject);
+    procedure AdjustEditBoundsRect;
+    procedure DrawButton(dc: HDC);
+    procedure SetSpace(const Value: Integer);
+    procedure SetButtonPicture(const Value: TPicture);
+    procedure SetBorderColor(const Value: TColor);
+    procedure SetBorderColorHover(const Value: TColor);
   protected
-    procedure DoClickButton; override;
+    procedure CMMouseEnter(var msgr: TMessage); message CM_MOUSEENTER;
+    procedure CMMouseLeave(var msgr: TMessage); message CM_MOUSELEAVE;
+    procedure WMSize(var msgr: TWMSize); message WM_SIZE;
+    procedure WMPaint(var msgr: TWMPaint); message WM_PAINT;
+    procedure CBShowDropDown(var msgr: TMessage); message CB_SHOWDROPDOWN;
+    procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
+    procedure WMLButtonDown(var msgr: TWMNCLButtonDown); message WM_LBUTTONDOWN;
+    procedure WMLButtonUp(var msgr: TWMNCLButtonUp); message WM_LBUTTONUP;
+    procedure WMLButtonDblClk(var msgr: TWMLButtonDblClk); message WM_LBUTTONDBLCLK;
+    procedure CreateWnd; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   published
-    property ButtonPicture;
-    property Space;
-    property OnSelect: TNotifyEvent read FOnSelect write FOnSelect;
+    property Space: Integer read FSpace write SetSpace default 0;
+    property ButtonPicture: TPicture read FButtonPicture write SetButtonPicture;
+    property BorderColor: TColor read FBorderColor write SetBorderColor;
+    property BorderColorHover: TColor read FBorderColorHover write SetBorderColorHover;
   end;
 
   TFsCustomCheckBox = class(TFsGraphicControl)
@@ -509,6 +533,9 @@ type
   end;
 
 implementation
+
+uses
+  FSEmptyForm;
 
 type
   TFsBorderlessMemo = class(TCustomMemo)
@@ -1329,7 +1356,8 @@ begin
     
     hb := CreateSolidBrush(bgc);
     Windows.FrameRect(dc, Rect(0, 0, Self.Width, Self.Height), hb);
-
+    DeleteObject(hb);
+    
     msgr.Result := 0;
   finally
     ReleaseDC(Handle, dc);
@@ -2149,9 +2177,167 @@ end;
 
 { TFsCombobox }
 
-procedure TFsCombobox.DoClickButton;
+procedure TFsCombobox.AdjustEditBoundsRect;
 begin
+  case Self.Style of
+    csDropDown:
+      begin
+        if FButtonPicture.Width > 0 then
+          MoveWindow(FEditHandle, 1, 1, Self.Width - 2 - FSpace - FButtonPicture.Width, Self.Height - 2, True)
+        else
+          MoveWindow(FEditHandle, 1, 1, Self.Width - 2, Self.Height - 2, True);
+      end;
+    csSimple: MoveWindow(FEditHandle, 1, 1, Self.Width - 2, Self.Height - 2, True);
+  end;
+end;
 
+procedure TFsCombobox.ButtonPictureChanged(Sender: TObject);
+begin
+  AdjustEditBoundsRect;
+end;
+
+procedure TFsCombobox.CBShowDropDown(var msgr: TMessage);
+begin
+  inherited;
+  AdjustEditBoundsRect;
+end;
+
+procedure TFsCombobox.CMMouseEnter(var msgr: TMessage);
+begin
+  FMouseOver := True;
+end;
+
+procedure TFsCombobox.CMMouseLeave(var msgr: TMessage);
+begin
+  FMouseOver := False;
+end;
+
+constructor TFsCombobox.Create(AOwner: TComponent);
+begin
+  inherited;
+  FBorderColorHover := RGB(123, 228, 255);
+  FBorderColor := RGB(78, 160, 209);
+  FButtonPicture := TPicture.Create;
+  FButtonPicture.OnChange := Self.ButtonPictureChanged;
+end;
+
+procedure TFsCombobox.CreateWnd;
+begin
+  inherited;
+  AdjustEditBoundsRect;
+end;
+
+destructor TFsCombobox.Destroy;
+begin
+  FButtonPicture.Free;
+  inherited;
+end;
+
+procedure TFsCombobox.DrawButton(dc: HDC);
+var
+  X, Y: Integer;
+  canvas: TCanvas;
+begin
+  if FButtonPicture.Width > 0 then
+  begin
+    X := Self.Width - 1 - FButtonPicture.Width - FSpace div 2;
+    Y := (Self.Height - FButtonPicture.Height) div 2;
+
+    canvas := TCanvas.Create;
+
+    try
+      canvas.Handle := dc;
+      canvas.Draw(X, Y, FButtonPicture.Graphic);
+    finally
+      canvas.Handle := 0;
+      canvas.Free;
+    end;
+
+  end;
+end;
+
+procedure TFsCombobox.SetBorderColor(const Value: TColor);
+begin
+  if FBorderColor <> Value then
+  begin
+    FBorderColor := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TFsCombobox.SetBorderColorHover(const Value: TColor);
+begin
+  if FBorderColorHover <> Value then
+  begin
+    FBorderColorHover := Value;
+    Invalidate;
+  end;
+end;
+
+procedure TFsCombobox.SetButtonPicture(const Value: TPicture);
+begin
+  FButtonPicture.Assign(Value);
+end;
+
+procedure TFsCombobox.SetSpace(const Value: Integer);
+begin
+  if (FSpace <> Value) and (Value >= 0) then
+  begin
+    FSpace := Value;
+    AdjustEditBoundsRect;
+  end;
+end;
+
+procedure TFsCombobox.WMLButtonDblClk(var msgr: TWMLButtonDblClk);
+begin
+  msgr.Result := 0;  
+end;
+
+procedure TFsCombobox.WMLButtonDown(var msgr: TWMNCLButtonDown);
+begin
+  Self.DroppedDown := not Self.DroppedDown;
+  msgr.Result := 0;
+end;
+
+procedure TFsCombobox.WMLButtonUp(var msgr: TWMNCLButtonUp);
+begin
+  msgr.Result := 0;
+end;
+
+procedure TFsCombobox.WMNCCalcSize(var msgr: TWMNCCalcSize);
+begin
+  msgr.Result := 0;
+end;
+
+procedure TFsCombobox.WMPaint(var msgr: TWMPaint);
+var
+  ps: TPaintStruct;
+  dc: HDC;
+  hb: HBRUSH;
+  bgc: TColor;
+
+begin
+  dc := BeginPaint(Handle, ps);
+
+  try
+    if FMouseOver then bgc := ColorToRGB(FBorderColorHover)
+    else bgc := ColorToRGB(FBorderColor);
+
+    hb := CreateSolidBrush(bgc);
+    Windows.FrameRect(dc, Rect(0, 0, Self.Width, Self.Height), hb);
+    DeleteObject(hb);
+
+    Self.DrawButton(dc);
+  finally
+    EndPaint(Handle, ps);
+    msgr.Result := 0;
+  end;
+end;
+
+procedure TFsCombobox.WMSize(var msgr: TWMSize);
+begin
+  inherited;
+  AdjustEditBoundsRect;
 end;
 
 end.
