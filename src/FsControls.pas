@@ -25,16 +25,16 @@ type
 
   TFsCustomScrollBar = class(TComponent)
   private
-    FVScrollWidth: Integer;
-    FHScrollHeight: Integer;
-    FVArrowHeight: Integer;
-    FHArrowWidth: Integer;
-    FMinThumbLength: Integer;
-    procedure SetHScrollHeight(const Value: Integer);
-    procedure SetVScrollWidth(const Value: Integer);
-    procedure SetHArrowWidth(const Value: Integer);
-    procedure SetVArrowHeight(const Value: Integer);
-    procedure SetMinThumbLength(const Value: Integer);
+    FVScrollWidth: UINT;
+    FHScrollHeight: UINT;
+    FVArrowHeight: UINT;
+    FHArrowWidth: UINT;
+    FMinThumbLength: UINT;
+    procedure SetHScrollHeight(const Value: UINT);
+    procedure SetVScrollWidth(const Value: UINT);
+    procedure SetHArrowWidth(const Value: UINT);
+    procedure SetVArrowHeight(const Value: UINT);
+    procedure SetMinThumbLength(const Value: UINT);
   protected
     procedure Changed;
   public
@@ -42,15 +42,15 @@ type
     procedure CalcVScroll(const rc: TRect; const si: TScrollInfo; var rcTopArrow, rcBottomArrow, rcThumb: TRect);
     procedure CalcHScroll(const rc: TRect; const si: TScrollInfo; var rcLeftArrow, rcRightArrow, rcThumb: TRect);
     function CalcVPos(const rc: TRect; const si: TScrollInfo; Y: Integer): Integer;
-    function CalcHPos(const rc: TRect; const si: TScrollInfo; Y: Integer): Integer;
+    function CalcHPos(const rc: TRect; const si: TScrollInfo; X: Integer): Integer;
     procedure DrawVScroll(dc: HDC; const rc, rcTopArrow, rcBottomArrow, rcThumb: TRect); virtual; abstract;
     procedure DrawHScroll(dc: HDC; const rc, rcLeftArrow, rcRightArrow, rcThumb: TRect); virtual; abstract;
     procedure DrawIntersect(dc: HDC; const rc: TRect); virtual; abstract;
-    property HScrollHeight: Integer read FHScrollHeight write SetHScrollHeight;
-    property VScrollWidth: Integer read FVScrollWidth write SetVScrollWidth;
-    property VArrowHeight: Integer read FVArrowHeight write SetVArrowHeight;
-    property HArrowWidth: Integer read FHArrowWidth write SetHArrowWidth;
-    property MinThumbLength: Integer read FMinThumbLength write SetMinThumbLength;
+    property HScrollHeight: UINT read FHScrollHeight write SetHScrollHeight;
+    property VScrollWidth: UINT read FVScrollWidth write SetVScrollWidth;
+    property VArrowHeight: UINT read FVArrowHeight write SetVArrowHeight;
+    property HArrowWidth: UINT read FHArrowWidth write SetHArrowWidth;
+    property MinThumbLength: UINT read FMinThumbLength write SetMinThumbLength;
   end;
 
   TFsFlatScrollBar = class(TFsCustomScrollBar)
@@ -132,8 +132,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure PaintNC;
     procedure NCChanged;
+    procedure PaintNC;
     procedure SetScrollRange(IsVert: Boolean; nMin, nMax, nPage: Integer);
     procedure SetScrollPos(IsVert: Boolean; nPos: Integer);
     property ParentBackground;
@@ -228,7 +228,7 @@ end;
 
 function NeedScroll(const si: TScrollInfo): Boolean; inline;
 begin
-  Result := (si.nPage > 0) and (si.nMin <> si.nMax) and (si.nMax - si.nMin + 1 > si.nPage);
+  Result := (si.nPage > 0) and (si.nMin <> si.nMax) and (UINT(si.nMax - si.nMin + 1) > si.nPage);
 end;
 
 { TFsCustomScrollBar }
@@ -236,23 +236,25 @@ end;
 const
   SCROLL_MIN_THUMB_LENGTH = 20;
 
-function TFsCustomScrollBar.CalcHPos(const rc: TRect; const si: TScrollInfo; Y: Integer): Integer;
+function TFsCustomScrollBar.CalcHPos(const rc: TRect; const si: TScrollInfo; X: Integer): Integer;
 var
-  ThumbWidth, ScrollWidth: Integer;
+  ThumbWidth, ScrollWidth, ScrollRange: UINT;
 begin
-  if (si.nMax >= si.nMin) and (si.nPage <= si.nMax - si.nMin) then
-  begin
-    ScrollWidth := rc.Right - rc.Left - FHArrowWidth shl 1;
+  ScrollRange := si.nMax + 1 - si.nMin;
 
-    ThumbWidth := si.nPage * ScrollWidth div (si.nMax - si.nMin + 1);
+  if (si.nMax >= si.nMin) and (si.nPage < ScrollRange) then
+  begin
+    ScrollWidth := UINT(rc.Right - rc.Left) - FHArrowWidth shl 1;
+
+    ThumbWidth := si.nPage * ScrollWidth div ScrollRange;
 
     if ThumbWidth < Self.MinThumbLength then ThumbWidth := Self.MinThumbLength;
 
-    if Y <= rc.Left + FHArrowWidth then Result := si.nMin
-    else if Y > rc.Right - FHArrowWidth - ThumbWidth then Result := si.nMax - si.nPage + 1
+    if X <= rc.Left + Integer(FHArrowWidth) then Result := si.nMin
+    else if X > rc.Right - Integer(FHArrowWidth + ThumbWidth) then Result := si.nMax - Integer(si.nPage) + 1
     else begin
-      Y := Y - rc.Left - FHArrowWidth;
-      Result := (si.nMax - si.nMin + 1 - si.nPage) * Y div (ScrollWidth - ThumbWidth) + si.nMin - 1;
+      X := X - rc.Left - Integer(FHArrowWidth);
+      Result := Integer((ScrollRange - si.nPage) * UINT(X) div (ScrollWidth - ThumbWidth)) + si.nMin - 1;
     end;
   end
   else Result := si.nMin - 1;
@@ -261,33 +263,36 @@ end;
 procedure TFsCustomScrollBar.CalcHScroll(const rc: TRect; const si: TScrollInfo; var rcLeftArrow, rcRightArrow,
   rcThumb: TRect);
 var
-  ThumbWidth, ThumbPos, ScrollWidth: Integer;
+  ThumbWidth, ScrollWidth, ScrollRange: UINT;
+  ThumbPos: Integer;
 begin
   rcLeftArrow.Left := rc.Left;
-  rcLeftArrow.Right := rc.Left + FHArrowWidth;
+  rcLeftArrow.Right := rc.Left + Integer(FHArrowWidth);
   rcLeftArrow.Top := rc.Top;
   rcLeftArrow.Bottom := rc.Bottom;
 
-  rcRightArrow.Left := rc.Right - FHArrowWidth;
+  rcRightArrow.Left := rc.Right - Integer(FHArrowWidth);
   rcRightArrow.Right := rc.Right;
   rcRightArrow.Top := rc.Top;
   rcRightArrow.Bottom := rc.Bottom;
 
-  if (si.nMax >= si.nMin) and (si.nPage <= si.nMax - si.nMin) then
+  ScrollRange := si.nMax - si.nMin + 1;
+  
+  if (si.nMax >= si.nMin) and (si.nPage < ScrollRange) then
   begin
-    ScrollWidth := rc.Right - rc.Left - FHArrowWidth shl 1;
+    ScrollWidth := UINT(rc.Right - rc.Left) - FHArrowWidth shl 1;
 
     rcThumb.Top := rc.Top;
     rcThumb.Bottom := rc.Bottom;
 
-    ThumbWidth := si.nPage * ScrollWidth div (si.nMax - si.nMin + 1);
+    ThumbWidth := si.nPage * ScrollWidth div ScrollRange;
 
     if ThumbWidth < Self.MinThumbLength then ThumbWidth := Self.MinThumbLength;
 
-    ThumbPos := (si.nPos - si.nMin) * (ScrollWidth - ThumbWidth) div (si.nMax - si.nMin + 1 - si.nPage);
+    ThumbPos := UINT(si.nPos - si.nMin) * (ScrollWidth - ThumbWidth) div (ScrollRange - si.nPage);
 
-    rcThumb.Left := rc.Left + FHArrowWidth + ThumbPos;
-    rcThumb.Right := rcThumb.Left + ThumbWidth;
+    rcThumb.Left := rc.Left + Integer(FHArrowWidth) + ThumbPos;
+    rcThumb.Right := rcThumb.Left + Integer(ThumbWidth);
   end
   else begin
     rcThumb.Left := 0;
@@ -299,21 +304,23 @@ end;
 
 function TFsCustomScrollBar.CalcVPos(const rc: TRect; const si: TScrollInfo; Y: Integer): Integer;
 var
-  ThumbHeight, ScrollHeight: Integer;
+  ThumbHeight, ScrollHeight, ScrollRange: UINT;
 begin
-  if (si.nMax >= si.nMin) and (si.nPage <= si.nMax - si.nMin) then
+  ScrollRange := si.nMax - si.nMin + 1;
+  
+  if (si.nMax >= si.nMin) and (si.nPage < ScrollRange) then
   begin
-    ScrollHeight := rc.Bottom - rc.Top - FVArrowHeight shl 1;
+    ScrollHeight := UINT(rc.Bottom - rc.Top) - FVArrowHeight shl 1;
 
-    ThumbHeight := si.nPage * ScrollHeight div (si.nMax - si.nMin + 1);
+    ThumbHeight := si.nPage * ScrollHeight div ScrollRange;
 
     if ThumbHeight < Self.MinThumbLength then ThumbHeight := Self.MinThumbLength;
 
-    if Y <= rc.Top + FVArrowHeight then Result := si.nMin
-    else if Y > rc.Bottom - FVArrowHeight - ThumbHeight then Result := si.nMax - si.nPage + 1
+    if Y <= rc.Top + Integer(FVArrowHeight) then Result := si.nMin
+    else if Y > rc.Bottom - Integer(FVArrowHeight + ThumbHeight) then Result := si.nMax - Integer(si.nPage) + 1
     else begin
-      Y := Y - rc.Top - FVArrowHeight;
-      Result := (si.nMax - si.nMin + 1 - si.nPage) * Y div (ScrollHeight - ThumbHeight) + si.nMin;
+      Y := Y - rc.Top - Integer(FVArrowHeight);
+      Result := Integer((ScrollRange - si.nPage) * UINT(Y) div (ScrollHeight - ThumbHeight)) + si.nMin;
     end;
   end
   else Result := si.nMin - 1;
@@ -322,33 +329,35 @@ end;
 procedure TFsCustomScrollBar.CalcVScroll(const rc: TRect; const si: TScrollInfo;
   var rcTopArrow, rcBottomArrow, rcThumb: TRect);
 var
-  ThumbHeight, ThumbPos, ScrollHeight: Integer;
+  ThumbHeight, ScrollHeight, ScrollRange, ThumbPos: UINT;
 begin
   rcTopArrow.Left := rc.Left;
   rcTopArrow.Right := rc.Right;
   rcTopArrow.Top := rc.Top;
-  rcTopArrow.Bottom := rcTopArrow.Top + FVArrowHeight;
+  rcTopArrow.Bottom := rcTopArrow.Top + Integer(FVArrowHeight);
 
   rcBottomArrow.Left := rc.Left;
   rcBottomArrow.Right := rc.Right;
-  rcBottomArrow.Top := rc.Bottom - FVArrowHeight;
+  rcBottomArrow.Top := rc.Bottom - Integer(FVArrowHeight);
   rcBottomArrow.Bottom := rc.Bottom;
 
-  if (si.nMax >= si.nMin) and (si.nPage <= si.nMax - si.nMin) then
+  ScrollRange := si.nMax - si.nMin + 1;
+
+  if (si.nMax >= si.nMin) and (si.nPage < ScrollRange) then
   begin
-    ScrollHeight := rc.Bottom - rc.Top - FVArrowHeight shl 1;
+    ScrollHeight := UINT(rc.Bottom - rc.Top) - FVArrowHeight shl 1;
 
     rcThumb.Left := rc.Left;
     rcThumb.Right := rc.Right;
 
-    ThumbHeight := si.nPage * ScrollHeight div (si.nMax - si.nMin + 1);
+    ThumbHeight := si.nPage * ScrollHeight div ScrollRange;
 
     if ThumbHeight < Self.MinThumbLength then ThumbHeight := Self.MinThumbLength;
 
-    ThumbPos := (si.nPos - si.nMin) * (ScrollHeight - ThumbHeight) div (si.nMax - si.nMin + 1 - si.nPage);
+    ThumbPos := UINT(si.nPos - si.nMin) * (ScrollHeight - ThumbHeight) div (ScrollRange - si.nPage);
 
-    rcThumb.Top := rc.Top + FVArrowHeight + ThumbPos;
-    rcThumb.Bottom := rcThumb.Top + ThumbHeight;
+    rcThumb.Top := rc.Top + Integer(FVArrowHeight + ThumbPos);
+    rcThumb.Bottom := rcThumb.Top + Integer(ThumbHeight);
   end
   else begin
     rcThumb.Left := 0;
@@ -373,16 +382,16 @@ begin
   FMinThumbLength := SCROLL_MIN_THUMB_LENGTH;
 end;
 
-procedure TFsCustomScrollBar.SetHArrowWidth(const Value: Integer);
+procedure TFsCustomScrollBar.SetHArrowWidth(const Value: UINT);
 begin
-  if (FHArrowWidth <> Value) and (Value >= 0) then
+  if FHArrowWidth <> Value then
   begin
     FHArrowWidth := Value;
     Changed;
   end;
 end;
 
-procedure TFsCustomScrollBar.SetHScrollHeight(const Value: Integer);
+procedure TFsCustomScrollBar.SetHScrollHeight(const Value: UINT);
 begin
   if (FHScrollHeight <> Value) and (Value > 0) then
   begin
@@ -391,7 +400,7 @@ begin
   end;
 end;
 
-procedure TFsCustomScrollBar.SetMinThumbLength(const Value: Integer);
+procedure TFsCustomScrollBar.SetMinThumbLength(const Value: UINT);
 begin
   if (FMinThumbLength <> Value) and (Value >= SCROLL_MIN_THUMB_LENGTH) then
   begin
@@ -400,16 +409,16 @@ begin
   end;
 end;
 
-procedure TFsCustomScrollBar.SetVArrowHeight(const Value: Integer);
+procedure TFsCustomScrollBar.SetVArrowHeight(const Value: UINT);
 begin
-  if (FVArrowHeight <> Value) and (Value >= 0) then
+  if FVArrowHeight <> Value then
   begin
     FVArrowHeight := Value;
     Changed;
   end;
 end;
 
-procedure TFsCustomScrollBar.SetVScrollWidth(const Value: Integer);
+procedure TFsCustomScrollBar.SetVScrollWidth(const Value: UINT);
 begin
   if (FVScrollWidth <> Value) and (Value > 0) then
   begin
@@ -821,10 +830,10 @@ begin
   if fsi.ShowVScroll then
   begin
     fsi.VScroll.Right := r.Right;
-    fsi.VScroll.Left := fsi.VScroll.Right - sb.VScrollWidth;
+    fsi.VScroll.Left := fsi.VScroll.Right - Integer(sb.VScrollWidth);
     fsi.VScroll.Top := r.Top;
 
-    if fsi.ShowHScroll then fsi.VScroll.Bottom := r.Bottom - sb.HScrollHeight
+    if fsi.ShowHScroll then fsi.VScroll.Bottom := r.Bottom - Integer(sb.HScrollHeight)
     else fsi.VScroll.Bottom := r.Bottom;
 
     sb.CalcVScroll(fsi.VScroll, vsi, fsi.TopArrow, fsi.BottomArrow, fsi.VThumb);
@@ -833,10 +842,10 @@ begin
   if fsi.ShowHScroll then
   begin
     fsi.HScroll.Bottom := r.Bottom;
-    fsi.HScroll.Top := fsi.HScroll.Bottom - sb.HScrollHeight;
+    fsi.HScroll.Top := fsi.HScroll.Bottom - Integer(sb.HScrollHeight);
     fsi.HScroll.Left := r.Left;
 
-    if fsi.ShowHScroll then fsi.HScroll.Right := r.Right - sb.VScrollWidth
+    if fsi.ShowHScroll then fsi.HScroll.Right := r.Right - Integer(sb.VScrollWidth)
     else fsi.HScroll.Right := r.Right;
 
     sb.CalcHScroll(fsi.HScroll, hsi, fsi.LeftArrow, fsi.RightArrow, fsi.HThumb);
@@ -844,9 +853,9 @@ begin
 
   if fsi.ShowVScroll and fsi.ShowHScroll then
   begin
-    fsi.Intersect.Left := r.Right - sb.VScrollWidth;
+    fsi.Intersect.Left := r.Right - Integer(sb.VScrollWidth);
     fsi.Intersect.Right := r.Right;
-    fsi.Intersect.Top := r.Bottom - sb.HScrollHeight;
+    fsi.Intersect.Top := r.Bottom - Integer(sb.HScrollHeight);
     fsi.Intersect.Bottom := r.Bottom;
   end;
 end;
@@ -1081,13 +1090,13 @@ end;
 
 procedure TFsCustomControl.WMEraseBkgnd(var msgr: TWMEraseBkgnd);
 begin
-  if not FDoubleBuffered or (msgr.DC = HDC(msgr.Unused)) then
+  if ParentBackground and Assigned(Parent) then
   begin
-    if ParentBackground and Assigned(Parent) then
-      ThemeServices.DrawParentBackground(Handle, msgr.DC, nil, False)
-    else
-      Windows.FillRect(msgr.DC, ClientRect, Self.Brush.Handle);
-  end;
+    if Parent.DoubleBuffered then PerformEraseBackground(Self, msgr.DC)
+    else ThemeServices.DrawParentBackground(Handle, msgr.DC, nil, False);
+  end
+  else if not FDoubleBuffered or (msgr.DC = HDC(msgr.Unused)) then
+    Windows.FillRect(msgr.DC, ClientRect, Self.Brush.Handle);
 
   msgr.Result := 1;
 end;
@@ -1095,7 +1104,7 @@ end;
 procedure TFsCustomControl.WMHScroll(var msgr: TWMHScroll);
 var
   si: TScrollInfo;
-  nPos: Integer;
+  nPos, nMaxPos: Integer;
 begin
   Self.GetControlScrollInfo(si, False);
   nPos := si.nPos;
@@ -1107,12 +1116,13 @@ begin
     SB_PAGERIGHT: Inc(nPos, si.nPage);
     SB_THUMBTRACK, SB_THUMBPOSITION: nPos := msgr.Pos;
     SB_LEFT: nPos := si.nMin;
-    SB_RIGHT: nPos := si.nMax - si.nPage + 1;
+    SB_RIGHT: nPos := si.nMax - Integer(si.nPage) + 1;
   end;
 
   if nPos < si.nMin then nPos := si.nMin;
 
-  if nPos > si.nMax - si.nPage + 1 then nPos := si.nMax - si.nPage + 1;
+  nMaxPos := si.nMax - Integer(si.nPage) + 1;
+  if nPos > nMaxPos then nPos := nMaxPos;
 
   DoCanScroll(True, nPos);
 
@@ -1126,7 +1136,7 @@ end;
 procedure TFsCustomControl.WMMouseWheel(var msgr: TWMMouseWheel);
 var
   ShiftState: TShiftState;
-  m, nPos: Integer;
+  m, nPos, nMaxPos: Integer;
   si: TScrollInfo;
 begin
   ShiftState := KeysToShiftState(msgr.Keys);
@@ -1142,7 +1152,8 @@ begin
 
     if nPos < si.nMin then nPos := si.nMin;
 
-    if nPos > si.nMax - si.nPage + 1 then nPos := si.nMax - si.nPage + 1;
+    nMaxPos := si.nMax - Integer(si.nPage) + 1;
+    if nPos > nMaxPos then nPos := nMaxPos;
 
     if nPos <> si.nPos then
       Self.DragThumb(SB_VERT, SB_THUMBPOSITION, nPos);
@@ -1319,10 +1330,12 @@ end;
 procedure TFsCustomControl.WMVScroll(var msgr: TWMVScroll);
 var
   si: TScrollInfo;
-  nPos: Integer;
+  nMaxPos, nPos: Integer;
 begin
   Self.GetControlScrollInfo(si, True);
   nPos := si.nPos;
+
+  nMaxPos := si.nMax - Integer(si.nPage) + 1;
 
   case msgr.ScrollCode of
     SB_LINEUP: Dec(nPos);
@@ -1331,12 +1344,12 @@ begin
     SB_PAGEDOWN: Inc(nPos, si.nPage);
     SB_THUMBTRACK, SB_THUMBPOSITION: nPos := msgr.Pos;
     SB_TOP: nPos := si.nMin;
-    SB_BOTTOM: nPos := si.nMax - si.nPage + 1;
+    SB_BOTTOM: nPos := nMaxPos;
   end;
 
   if nPos < si.nMin then nPos := si.nMin;
 
-  if nPos > si.nMax - si.nPage + 1 then nPos := si.nMax - si.nPage + 1;
+  if nPos > nMaxPos then nPos := nMaxPos;
 
   DoCanScroll(True, nPos);
 

@@ -454,93 +454,6 @@ type
     property ButtonPicture;
     property Space;
     property OnSelect: TNotifyEvent read FOnSelect write FOnSelect;
-  end;  
-
-  TFsNCScrollMemo = class(TCustomMemo)
-  private
-    FBorderColorHover: TColor;
-    FMouseIn: Boolean;
-    FScrollBar: TFsCustomScrollBar;
-    procedure PaintNC;
-    procedure CMMouseEnter(var msg: TMessage); message CM_MOUSEENTER;
-    procedure CMMouseLeave(var msg: TMessage); message CM_MOUSELEAVE;
-    procedure WMNCPAINT(var msgr: TWMNCPaint); message WM_NCPAINT;
-    procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
-    procedure WMNCHitTest(var msgr: TWMNCHitTest); message WM_NCHITTEST;
-    procedure WMNCLButtonDown(var msgr: TWMNCLButtonDown); message WM_NCLBUTTONDOWN;
-    procedure SetBorderColorHover(const Value: TColor);
-    procedure SetScrollBar(const Value: TFsCustomScrollBar);
-    function GetRealScrollBar: TFsCustomScrollBar;
-  protected
-    procedure GetScrollRect(var rcVScroll, rcHScroll, rcIntersect: TRect);
-    function GetVScrollRect(var rc: TRect): Boolean;
-    function GetHScrollRect(var rc: TRect): Boolean;
-    procedure WndProc(var msgr: TMessage); override;
-    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
-  public
-    constructor Create(AOwner: TComponent); override;
-  published
-    property ScrollBar: TFsCustomScrollBar read FScrollBar write SetScrollBar;
-    property BorderColorHover: TColor read FBorderColorHover write SetBorderColorHover;
-    property Align;
-    property Alignment;
-    property Anchors;
-    property BevelEdges;
-    property BevelInner;
-    property BevelKind default bkNone;
-    property BevelOuter;
-    property BiDiMode;
-    property BorderStyle;
-    property Color;
-    property Constraints;
-    property Ctl3D;
-    property DragCursor;
-    property DragKind;
-    property DragMode;
-    property Enabled;
-    property Font;
-    property HideSelection;
-    property ImeMode;
-    property ImeName;
-    property Lines;
-    property MaxLength;
-    property OEMConvert;
-    property ParentBiDiMode;
-    property ParentColor;
-    property ParentCtl3D;
-    property ParentFont;
-    property ParentShowHint;
-    property PopupMenu;
-    property ReadOnly;
-    property ScrollBars;
-    property ShowHint;
-    property TabOrder;
-    property TabStop;
-    property Visible;
-    property WantReturns;
-    property WantTabs;
-    property WordWrap;
-    property OnChange;
-    property OnClick;
-    property OnContextPopup;
-    property OnDblClick;
-    property OnDragDrop;
-    property OnDragOver;
-    property OnEndDock;
-    property OnEndDrag;
-    property OnEnter;
-    property OnExit;
-    property OnKeyDown;
-    property OnKeyPress;
-    property OnKeyUp;
-    property OnMouseActivate;
-    property OnMouseDown;
-    property OnMouseEnter;
-    property OnMouseLeave;
-    property OnMouseMove;
-    property OnMouseUp;
-    property OnStartDock;
-    property OnStartDrag;
   end;
 
   TFsCustomCheckBox = class(TFsGraphicControl)
@@ -600,6 +513,7 @@ implementation
 type
   TFsBorderlessMemo = class(TCustomMemo)
   protected
+    procedure InheritedWndProc(var msgr: TMessage);
     procedure WndProc(var msgr: TMessage); override;
     procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
     procedure WMNCPaint(var msgr: TWMNCPaint); message WM_NCPAINT;
@@ -607,6 +521,7 @@ type
 
   TFsBorderlessListBox = class(TCustomListBox)
   protected
+    procedure InheritedWndProc(var msgr: TMessage);
     procedure WndProc(var msgr: TMessage); override;
     procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
     procedure WMNCPaint(var msgr: TWMNCPaint); message WM_NCPAINT;
@@ -614,6 +529,7 @@ type
 
   TFsBorderlessListView = class(TCustomListView)
   protected
+    procedure InheritedWndProc(var msgr: TMessage);
     procedure WndProc(var msgr: TMessage); override;
     procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
     procedure WMNCPaint(var msgr: TWMNCPaint); message WM_NCPAINT;
@@ -621,6 +537,7 @@ type
 
   TFsBorderlessTreeView = class(TCustomTreeView)
   protected
+    procedure InheritedWndProc(var msgr: TMessage);
     procedure WndProc(var msgr: TMessage); override;
     procedure WMNCCalcSize(var msgr: TWMNCCalcSize); message WM_NCCALCSIZE;
     procedure WMNCPaint(var msgr: TWMNCPaint); message WM_NCPAINT;
@@ -1718,332 +1635,6 @@ begin
   Self.NCChanged;
 end;
 
-{ TFsNCScrollMemo }
-
-procedure TFsNCScrollMemo.CMMouseEnter(var msg: TMessage);
-begin
-  inherited;
-  FMouseIn := True;
-end;
-
-procedure TFsNCScrollMemo.CMMouseLeave(var msg: TMessage);
-begin
-  inherited;
-  FMouseIn := False;
-end;
-
-constructor TFsNCScrollMemo.Create(AOwner: TComponent);
-begin
-  inherited;
-  FBorderColorHover := RGB(123, 228, 255);
-end;
-
-function TFsNCScrollMemo.GetHScrollRect(var rc: TRect): Boolean;
-var
-  style: Integer;
-begin
-  style := GetWindowLong(Handle, GWL_STYLE);
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    rc.Bottom := Self.Height - 2;
-    rc.Top := rc.Bottom - GetRealScrollBar.HScrollHeight;
-    rc.Left := 2;
-
-    if style and WS_VSCROLL = 0 then rc.Right := Self.Width - 2
-    else rc.Right := Self.Width - 2 - GetRealScrollBar.VScrollWidth;
-
-    Result := True;
-  end
-  else Result := False;
-end;
-
-function TFsNCScrollMemo.GetRealScrollBar: TFsCustomScrollBar;
-begin
-  if Assigned(FScrollBar) then Result := FScrollBar
-  else Result := GetDefaultScrollBar;
-end;
-
-procedure TFsNCScrollMemo.GetScrollRect(var rcVScroll, rcHScroll, rcIntersect: TRect);
-var
-  style: Integer;
-  sb: TFsCustomScrollBar;
-begin
-  sb := GetRealScrollBar;
-  style := GetWindowLong(Handle, GWL_STYLE);
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    rcVScroll.Right := Self.Width - 2;
-    rcVScroll.Left := rcVScroll.Right - sb.VScrollWidth;
-    rcVScroll.Top := 2;
-
-    if style and WS_HSCROLL = 0 then rcVScroll.Bottom := Self.Height - 2
-    else rcVScroll.Bottom := Self.Height - 2 - sb.HScrollHeight;
-  end
-  else begin
-    rcVScroll.Left := 0;
-    rcVScroll.Right := -1;
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    rcHScroll.Bottom := Self.Height - 2;
-    rcHScroll.Top := rcHScroll.Bottom - sb.HScrollHeight;
-    rcHScroll.Left := 2;
-
-    if style and WS_VSCROLL = 0 then rcHScroll.Right := Self.Width - 2
-    else rcHScroll.Right := Self.Width - 2 - sb.VScrollWidth;
-  end
-  else begin
-    rcHScroll.Left := 0;
-    rcHScroll.Right := -1;
-  end;
-
-  if (style and WS_HSCROLL <> 0) and (style and WS_VSCROLL <> 0) then
-  begin
-    rcIntersect.Left := Self.Width - 2 - sb.VScrollWidth;
-    rcIntersect.Right := Self.Width - 2;
-    rcIntersect.Top := Self.Height - 2 - sb.HScrollHeight;
-    rcIntersect.Bottom := Self.Height - 2;
-  end
-  else begin
-    rcIntersect.Left := 0;
-    rcIntersect.Right := -1;
-  end;
-  
-end;
-
-function TFsNCScrollMemo.GetVScrollRect(var rc: TRect): Boolean;
-var
-  style: Integer;
-begin
-  style := GetWindowLong(Handle, GWL_STYLE);
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    rc.Right := Self.Width - 2;
-    rc.Left := rc.Right - GetRealScrollBar.VScrollWidth;
-    rc.Top := 2;
-
-    if style and WS_HSCROLL = 0 then rc.Bottom := Self.Height - 2
-    else rc.Bottom := Self.Height - 2 - GetRealScrollBar.HScrollHeight;
-
-    Result := True;
-  end
-  else Result := False;
-end;
-
-procedure TFsNCScrollMemo.Notification(AComponent: TComponent; Operation: TOperation);
-begin
-  inherited;
-
-  if (Operation = opRemove) and (AComponent = FScrollBar) then
-    SetScrollBar(nil);
-end;
-
-procedure TFsNCScrollMemo.PaintNC;
-var
-  dc: HDC;
-  hb: HBRUSH;
-  r, rcIntersect, rcVScroll, rcHScroll: TRect;
-  bgc: DWORD;
-  si: TScrollInfo;
-  sb: TFsCustomScrollBar;
-begin
-  dc := GetWindowDC(Handle);
-
-  try
-    if FMouseIn then bgc := ColorToRGB(FBorderColorHover)
-    else bgc := RGB(78, 160, 209);
-
-    r.Left := 0;
-    r.Top := 0;
-    r.Right := Self.Width;
-    r.Bottom := Self.Height;
-
-    hb := CreateSolidBrush(bgc);
-    Windows.FrameRect(dc, r, hb);
-    DeleteObject(hb);
-
-    if FMouseIn then bgc := RGB(78, 160, 209)  
-    else bgc := ColorToRGB(Self.Color);
-
-    r.Left := 1;
-    r.Top := 1;
-    r.Right := Self.Width - 1;
-    r.Bottom := Self.Height - 1;
-
-    hb := CreateSolidBrush(bgc);
-    FrameRect(dc, r, hb);
-    DeleteObject(hb);
-
-    sb := GetRealScrollBar;
-    
-    Self.GetScrollRect(rcVScroll, rcHScroll, rcIntersect);
-
-    if rcVScroll.Left < rcVScroll.Right then
-    begin
-      si.cbSize := SizeOf(si);
-      si.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-      Windows.GetScrollInfo(Handle, SB_VERT, si);
-      //sb.DrawVScroll(dc, si, rcVScroll);
-    end;
-
-    if rcHScroll.Left < rcHScroll.Right then
-    begin
-      si.cbSize := SizeOf(si);
-      si.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-      Windows.GetScrollInfo(Handle, SB_HORZ, si);
-      //sb.DrawHScroll(dc, si, rcHScroll);
-    end;
-
-    if rcIntersect.Left < rcIntersect.Right then
-      sb.DrawIntersect(dc, rcIntersect);
-
-  finally
-    ReleaseDC(Handle, dc);
-  end;
-end;
-
-procedure TFsNCScrollMemo.SetBorderColorHover(const Value: TColor);
-begin
-  if FBorderColorHover <> Value then
-  begin
-    FBorderColorHover := Value;
-    Self.Invalidate;
-  end;
-end;
-
-procedure TFsNCScrollMemo.SetScrollBar(const Value: TFsCustomScrollBar);
-begin
-  if Value <> FScrollBar then
-  begin
-    if Assigned(FScrollBar) then
-      FScrollBar.RemoveFreeNotification(Self);
-
-    FScrollBar := Value;
-
-    if Assigned(FScrollBar) then
-      FScrollBar.FreeNotification(Self);
-
-    Self.RecreateWnd;
-  end;
-end;
-
-procedure TFsNCScrollMemo.WMNCCalcSize(var msgr: TWMNCCalcSize);
-var
-  sb: TFsCustomScrollBar;
-begin
-  with msgr.CalcSize_Params^ do
-  begin
-    rgrc[0].Left := rgrc[0].Left + 2;
-    rgrc[0].Top := rgrc[0].Top + 2;
-    rgrc[0].Right := rgrc[0].Right - 2;
-    rgrc[0].Bottom := rgrc[0].Bottom - 2;
-
-    sb := Self.GetRealScrollBar;
-    
-    if (GetWindowLong(Self.Handle, GWL_STYLE) and WS_VSCROLL) <> 0 then
-      Dec(rgrc[0].Right, sb.VScrollWidth);
-
-    if (GetWindowLong(Self.Handle, GWL_STYLE) and WS_HSCROLL) <> 0 then
-      Dec(rgrc[0].Bottom, sb.HScrollHeight);
-  end;
-
-  msgr.Result := 0;
-end;
-
-procedure TFsNCScrollMemo.WMNCHitTest(var msgr: TWMNCHitTest);
-var
-  pt: TPoint;
-  rcClient: TRect;
-begin
-  inherited;
-
-  pt.X := msgr.XPos;
-  pt.Y := msgr.YPos;
-  Windows.ScreenToClient(Self.Handle, pt);
-
-  Windows.GetClientRect(Self.Handle, rcClient);
-
-  if PtInRect(rcClient, pt) then msgr.Result := HTCLIENT
-  else begin
-    //PtInRect(Rect(rcClient.Right, 0, rcClient.Right + GetRealScrollBar.))
-  end;
-end;
-
-procedure TFsNCScrollMemo.WMNCLButtonDown(var msgr: TWMNCLButtonDown);
-begin
-  inherited;
-  //Self.Perform(WM_VSCROLL, SB_LINEDOWN, 0);
-end;
-
-procedure TFsNCScrollMemo.WMNCPAINT(var msgr: TWMNCPaint);
-begin
-  //inherited;
-  Self.PaintNC;
-  msgr.Result := 0;
-end;
-
-procedure TFsNCScrollMemo.WndProc(var msgr: TMessage);
-var
-  vsi1, hsi1, vsi2, hsi2: TScrollInfo;
-  style: Integer;
-  changed: Boolean;
-begin
-  if not HandleAllocated or (msgr.Msg = WM_CREATE) or (msgr.Msg = WM_NCCREATE)
-    or (msgr.Msg = WM_DESTROY) or (msgr.Msg = WM_NCDESTROY) then
-  begin
-    inherited;
-    Exit;
-  end;
-
-  changed := False;
-
-  style := GetWindowLong(Self.Handle, GWL_STYLE);
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi1.cbSize := SizeOf(vsi1);
-    vsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi1);
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi1.cbSize := SizeOf(hsi1);
-    hsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi1);
-  end;
-    
-  inherited;
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi2.cbSize := SizeOf(vsi2);
-    vsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi2);
-
-    if (vsi1.nMin <> vsi2.nMin) or (vsi1.nMax <> vsi2.nMax)
-      or (vsi1.nPage <> vsi2.nPage) or (vsi1.nPos <> vsi2.nPos) then
-      changed := True;
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi2.cbSize := SizeOf(hsi2);
-    hsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi2);
-
-    if (hsi1.nMin <> hsi2.nMin) or (hsi1.nMax <> hsi2.nMax)
-      or (hsi1.nPage <> hsi2.nPage) or (hsi1.nPos <> hsi2.nPos) then
-      changed := True;
-  end;
-
-  if changed then Self.PaintNC;
-end;
-
 { TFsCoverButton }
 
 constructor TFsCoverButton.Create(AOwner: TComponent);
@@ -2215,7 +1806,89 @@ begin
   TFsBorderlessMemo(RealControl).ScrollBars := Value;
 end;
 
+procedure BorderLesssWndProc(control: TWinControl; InheritedProc: TWndMethod; var msgr: TMessage);
+var
+  hwnd: THandle;
+  vsi1, hsi1, vsi2, hsi2: TScrollInfo;
+  vshow1, hshow1, vshow2, hshow2, changed: Boolean;
+  style: Integer;
+begin
+  if not control.HandleAllocated or (msgr.Msg = WM_CREATE) or (msgr.Msg = WM_NCCREATE)
+    or (msgr.Msg = WM_DESTROY) or (msgr.Msg = WM_NCDESTROY) then
+  begin
+    InheritedProc(msgr);
+    Exit;
+  end;
+
+  hwnd := control.Handle;
+  changed := False;
+
+  style := GetWindowLong(hwnd, GWL_STYLE);
+
+  if style and WS_VSCROLL <> 0 then
+  begin
+    vsi1.cbSize := SizeOf(vsi1);
+    vsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
+    GetScrollInfo(hwnd, SB_VERT, vsi1);
+    vshow1 := NeedScroll(vsi1);
+  end
+  else vshow1 := False;
+
+  if style and WS_HSCROLL <> 0 then
+  begin
+    hsi1.cbSize := SizeOf(hsi1);
+    hsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
+    GetScrollInfo(hwnd, SB_HORZ, hsi1);
+    hshow1 := NeedScroll(hsi1);
+  end
+  else hshow1 := False;
+
+  InheritedProc(msgr);
+
+  hwnd := Control.Handle;
+
+  style := GetWindowLong(hwnd, GWL_STYLE);
+
+  if style and WS_VSCROLL <> 0 then
+  begin
+    vsi2.cbSize := SizeOf(vsi2);
+    vsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
+    GetScrollInfo(hwnd, SB_VERT, vsi2);
+    vshow2 := NeedScroll(vsi2);
+  end
+  else vshow2 := False;
+
+  if (vshow1 <> vshow2) or ( vshow1 and ( (vsi1.nMin <> vsi2.nMin) or (vsi1.nMax <> vsi2.nMax)
+      or (vsi1.nPage <> vsi2.nPage) or (vsi1.nPos <> vsi2.nPos) ) ) then
+    changed := True;
+
+  if style and WS_HSCROLL <> 0 then
+  begin
+    hsi2.cbSize := SizeOf(hsi2);
+    hsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
+    GetScrollInfo(hwnd, SB_HORZ, hsi2);
+
+    hshow2 := NeedScroll(hsi2);
+  end
+  else hshow2 := False;
+
+  if (hshow1 <> hshow2) or ( hshow1 and ( (hsi1.nMin <> hsi2.nMin) or (hsi1.nMax <> hsi2.nMax)
+      or (hsi1.nPage <> hsi2.nPage) or (hsi1.nPos <> hsi2.nPos) ) ) then
+    changed := True;
+
+  if changed and (control.Parent is TFsScrollContainer) then
+  begin
+    if (vshow1 <> vshow2) or (hshow1 <> hshow2) then TFsScrollContainer(control.Parent).NCChanged
+    else TFsScrollContainer(control.Parent).PaintNC;
+  end;
+end;
+
 { TFsBorderlessMemo }
+
+procedure TFsBorderlessMemo.InheritedWndProc(var msgr: TMessage);
+begin
+  inherited WndProc(msgr);
+end;
 
 procedure TFsBorderlessMemo.WMNCCalcSize(var msgr: TWMNCCalcSize);
 begin
@@ -2228,64 +1901,8 @@ begin
 end;
 
 procedure TFsBorderlessMemo.WndProc(var msgr: TMessage);
-var
-  vsi1, hsi1, vsi2, hsi2: TScrollInfo;
-  style: Integer;
-  changed: Boolean;
 begin
-  if not HandleAllocated or (msgr.Msg = WM_CREATE) or (msgr.Msg = WM_NCCREATE)
-    or (msgr.Msg = WM_DESTROY) or (msgr.Msg = WM_NCDESTROY) then
-  begin
-    inherited;
-    Exit;
-  end;
-
-  changed := False;
-
-  style := GetWindowLong(Self.Handle, GWL_STYLE);
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi1.cbSize := SizeOf(vsi1);
-    vsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi1);
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi1.cbSize := SizeOf(hsi1);
-    hsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi1);
-  end;
-
-  inherited;
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi2.cbSize := SizeOf(vsi2);
-    vsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi2);
-
-    if (vsi1.nMin <> vsi2.nMin) or (vsi1.nMax <> vsi2.nMax)
-      or (vsi1.nPage <> vsi2.nPage) or (vsi1.nPos <> vsi2.nPos) then
-      changed := True;
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi2.cbSize := SizeOf(hsi2);
-    hsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi2);
-
-    if (hsi1.nMin <> hsi2.nMin) or (hsi1.nMax <> hsi2.nMax)
-      or (hsi1.nPage <> hsi2.nPage) or (hsi1.nPos <> hsi2.nPos) then
-      changed := True;
-  end;
-
-  if changed and (Self.Parent is TFsScrollContainer) then
-  begin
-    TFsScrollContainer(Self.Parent).NCChanged;
-  end;
+  BorderLesssWndProc(Self, Self.InheritedWndProc, msgr);
 end;
 
 { TFsListBox }
@@ -2312,6 +1929,11 @@ end;
 
 { TFsBorderlessListBox }
 
+procedure TFsBorderlessListBox.InheritedWndProc(var msgr: TMessage);
+begin
+  inherited WndProc(msgr);
+end;
+
 procedure TFsBorderlessListBox.WMNCCalcSize(var msgr: TWMNCCalcSize);
 begin
   msgr.Result := 0;
@@ -2323,67 +1945,16 @@ begin
 end;
 
 procedure TFsBorderlessListBox.WndProc(var msgr: TMessage);
-var
-  vsi1, hsi1, vsi2, hsi2: TScrollInfo;
-  style: Integer;
-  changed: Boolean;
 begin
-  if not HandleAllocated or (msgr.Msg = WM_CREATE) or (msgr.Msg = WM_NCCREATE)
-    or (msgr.Msg = WM_DESTROY) or (msgr.Msg = WM_NCDESTROY) then
-  begin
-    inherited;
-    Exit;
-  end;
-
-  changed := False;
-
-  style := GetWindowLong(Self.Handle, GWL_STYLE);
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi1.cbSize := SizeOf(vsi1);
-    vsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi1);
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi1.cbSize := SizeOf(hsi1);
-    hsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi1);
-  end;
-
-  inherited;
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi2.cbSize := SizeOf(vsi2);
-    vsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi2);
-
-    if (vsi1.nMin <> vsi2.nMin) or (vsi1.nMax <> vsi2.nMax)
-      or (vsi1.nPage <> vsi2.nPage) or (vsi1.nPos <> vsi2.nPos) then
-      changed := True;
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi2.cbSize := SizeOf(hsi2);
-    hsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi2);
-
-    if (hsi1.nMin <> hsi2.nMin) or (hsi1.nMax <> hsi2.nMax)
-      or (hsi1.nPage <> hsi2.nPage) or (hsi1.nPos <> hsi2.nPos) then
-      changed := True;
-  end;
-
-  if changed and (Self.Parent is TFsScrollContainer) then
-  begin
-    TFsScrollContainer(Self.Parent).NCChanged;
-  end;
+  BorderLesssWndProc(Self, Self.InheritedWndProc, msgr);
 end;
 
 { TFsBorderlessListView }
+
+procedure TFsBorderlessListView.InheritedWndProc(var msgr: TMessage);
+begin
+  inherited WndProc(msgr);
+end;
 
 procedure TFsBorderlessListView.WMNCCalcSize(var msgr: TWMNCCalcSize);
 begin
@@ -2396,64 +1967,8 @@ begin
 end;
 
 procedure TFsBorderlessListView.WndProc(var msgr: TMessage);
-var
-  vsi1, hsi1, vsi2, hsi2: TScrollInfo;
-  style: Integer;
-  changed: Boolean;
 begin
-  if not HandleAllocated or (msgr.Msg = WM_CREATE) or (msgr.Msg = WM_NCCREATE)
-    or (msgr.Msg = WM_DESTROY) or (msgr.Msg = WM_NCDESTROY) then
-  begin
-    inherited;
-    Exit;
-  end;
-
-  changed := False;
-
-  style := GetWindowLong(Self.Handle, GWL_STYLE);
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi1.cbSize := SizeOf(vsi1);
-    vsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi1);
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi1.cbSize := SizeOf(hsi1);
-    hsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi1);
-  end;
-
-  inherited;
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi2.cbSize := SizeOf(vsi2);
-    vsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi2);
-
-    if (vsi1.nMin <> vsi2.nMin) or (vsi1.nMax <> vsi2.nMax)
-      or (vsi1.nPage <> vsi2.nPage) or (vsi1.nPos <> vsi2.nPos) then
-      changed := True;
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi2.cbSize := SizeOf(hsi2);
-    hsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi2);
-
-    if (hsi1.nMin <> hsi2.nMin) or (hsi1.nMax <> hsi2.nMax)
-      or (hsi1.nPage <> hsi2.nPage) or (hsi1.nPos <> hsi2.nPos) then
-      changed := True;
-  end;
-
-  if changed and (Self.Parent is TFsScrollContainer) then
-  begin
-    TFsScrollContainer(Self.Parent).NCChanged;
-  end;
+  BorderLesssWndProc(Self, Self.InheritedWndProc, msgr);
 end;
 
 { TFsListView }
@@ -2500,6 +2015,11 @@ end;
 
 { TFsBorderlessTreeView }
 
+procedure TFsBorderlessTreeView.InheritedWndProc(var msgr: TMessage);
+begin
+  inherited WndProc(msgr);
+end;
+
 procedure TFsBorderlessTreeView.WMNCCalcSize(var msgr: TWMNCCalcSize);
 begin
   msgr.Result := 0;
@@ -2511,64 +2031,8 @@ begin
 end;
 
 procedure TFsBorderlessTreeView.WndProc(var msgr: TMessage);
-var
-  vsi1, hsi1, vsi2, hsi2: TScrollInfo;
-  style: Integer;
-  changed: Boolean;
 begin
-  if not HandleAllocated or (msgr.Msg = WM_CREATE) or (msgr.Msg = WM_NCCREATE)
-    or (msgr.Msg = WM_DESTROY) or (msgr.Msg = WM_NCDESTROY) then
-  begin
-    inherited;
-    Exit;
-  end;
-
-  changed := False;
-
-  style := GetWindowLong(Self.Handle, GWL_STYLE);
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi1.cbSize := SizeOf(vsi1);
-    vsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi1);
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi1.cbSize := SizeOf(hsi1);
-    hsi1.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi1);
-  end;
-
-  inherited;
-
-  if style and WS_VSCROLL <> 0 then
-  begin
-    vsi2.cbSize := SizeOf(vsi2);
-    vsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_VERT, vsi2);
-
-    if (vsi1.nMin <> vsi2.nMin) or (vsi1.nMax <> vsi2.nMax)
-      or (vsi1.nPage <> vsi2.nPage) or (vsi1.nPos <> vsi2.nPos) then
-      changed := True;
-  end;
-
-  if style and WS_HSCROLL <> 0 then
-  begin
-    hsi2.cbSize := SizeOf(hsi2);
-    hsi2.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-    GetScrollInfo(Self.Handle, SB_HORZ, hsi2);
-
-    if (hsi1.nMin <> hsi2.nMin) or (hsi1.nMax <> hsi2.nMax)
-      or (hsi1.nPage <> hsi2.nPage) or (hsi1.nPos <> hsi2.nPos) then
-      changed := True;
-  end;
-
-  if changed and (Self.Parent is TFsScrollContainer) then
-  begin
-    TFsScrollContainer(Self.Parent).NCChanged;
-  end;
+  BorderLesssWndProc(Self, Self.InheritedWndProc, msgr);
 end;
 
 { TFsTreeView }

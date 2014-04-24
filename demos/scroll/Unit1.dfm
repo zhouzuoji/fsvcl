@@ -31,11 +31,15 @@ object Form1: TForm1
     Top = 8
     Width = 858
     Height = 541
-    ActivePage = TabSheet5
+    ActivePage = TabSheet4
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 0
     object TabSheet1: TTabSheet
       Caption = 'Memo'
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         850
         509)
@@ -3788,6 +3792,10 @@ object Form1: TForm1
     object TabSheet2: TTabSheet
       Caption = 'ListBox'
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object FsListBox1: TFsListBox
         Left = 0
         Top = 0
@@ -7354,6 +7362,10 @@ object Form1: TForm1
     object TabSheet3: TTabSheet
       Caption = 'ListView'
       ImageIndex = 2
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object FsListView1: TFsListView
         Left = 0
         Top = 0

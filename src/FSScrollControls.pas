@@ -99,7 +99,7 @@ begin
 
         while offset > 0 do
         begin
-          if offset >= si.nPage then
+          if offset >= Integer(si.nPage) then
           begin
             RealControl.Perform(msg, SB_PAGEDOWN, 0);
             Dec(offset, si.nPage);
@@ -115,7 +115,7 @@ begin
 
         while offset > 0 do
         begin
-          if offset >= si.nPage then
+          if offset >= Integer(si.nPage) then
           begin
             RealControl.Perform(msg, SB_PAGEUP, 0);
             Dec(offset, si.nPage);
