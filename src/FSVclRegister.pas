@@ -4,7 +4,8 @@ interface
 
 uses
   SysUtils, Classes, Windows, DesignEditors, DesignIntf, DesignMenus, ComponentDesigner,
-  FSTheme, FSGraphics, FSControls, FSStdCtrls, FSSkinCtrls, FSScrollControls, FsNavTree;
+  FSTheme, FSGraphics, FSControls, FSStdCtrls, FSSkinCtrls, FSScrollControls, FSNavTree,
+  FSEdit;
 
 procedure Register;
 

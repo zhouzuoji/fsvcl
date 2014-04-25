@@ -43,6 +43,7 @@ contains
   FSTrayIcon in '..\src\FSTrayIcon.pas',
   FSVclBase in '..\src\FSVclBase.pas',
   FSSkinCtrls in '..\src\FSSkinCtrls.pas',
-  FSEmptyForm in '..\src\FSEmptyForm.pas' {EmptyForm};
+  FSEmptyForm in '..\src\FSEmptyForm.pas' {EmptyForm},
+  FSEdit in '..\src\FSEdit.pas';
 
 end.
