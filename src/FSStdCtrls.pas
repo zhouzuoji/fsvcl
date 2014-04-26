@@ -2139,20 +2139,47 @@ end;
 procedure TFsCombobox.Paint;
 var
   bgc: TColor;
+  r: TRect;
 begin
   FMouseInControlLastPaint := MouseInControl;
 
   if FMouseInControlLastPaint then bgc := FBorderColorHover
   else bgc := FBorderColor;
 
-  FCanvas.Brush.Color := Self.Color;
-  FCanvas.Brush.Style := bsSolid;
+  r.Left := 0;
+  r.Top := 0;
+  r.Right := Self.Width;
+  r.Bottom := Self.Height;
 
-  FCanvas.Pen.Color := bgc;
-  FCanvas.Pen.Mode := pmCopy;
-  FCanvas.Pen.Width := 1;
-  
-  FCanvas.Rectangle(Rect(0, 0, Self.Width, Self.Height));
+
+  FCanvas.Brush.Color := Self.Color;
+
+  if FEditHandle = 0 then
+  begin
+    FCanvas.Brush.Color := Self.Color;
+    FCanvas.Brush.Style := bsSolid;
+
+    FCanvas.Pen.Width := 1;
+    FCanvas.Pen.Color := bgc;
+    FCanvas.Pen.Style := psSolid;
+
+    FCanvas.Rectangle(r);
+  end
+  else begin
+    FCanvas.Brush.Color := bgc;
+    FCanvas.Brush.Style := bsSolid;
+    FCanvas.FrameRect(r);
+
+    if FButtonPicture.Width > 0 then
+    begin
+      r.Right := Self.Width - 1;
+      r.Left := r.Right - FButtonPicture.Width - FSpace;
+      r.Top := 1;
+      r.Bottom := Self.Height - 1;
+      FCanvas.Brush.Color := Self.Color;
+      FCanvas.FillRect(r);
+    end;
+  end;
 
   Self.DrawButton;
 end;
