@@ -1505,8 +1505,6 @@ var
   w, h: Integer;
   r: TRect;
 begin
-  inherited;
-
   Self.GetContentDimension(dim);
   cover := Self.GetCover;
 
@@ -1530,6 +1528,8 @@ begin
     else if cover is TFsMultiFrameDrawable then
       TFsMultiFrameDrawable(cover).DrawFrame(Self.Canvas.Handle, r, 0);
   end;
+
+  inherited;
 end;
 
 procedure TFsCoverButton.PictureChanged(Sender: TObject);
