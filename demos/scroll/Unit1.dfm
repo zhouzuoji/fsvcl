@@ -31,15 +31,11 @@ object Form1: TForm1
     Top = 8
     Width = 858
     Height = 541
-    ActivePage = TabSheet4
+    ActivePage = TabSheet6
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 0
     object TabSheet1: TTabSheet
       Caption = 'Memo'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         850
         509)
@@ -3792,10 +3788,6 @@ object Form1: TForm1
     object TabSheet2: TTabSheet
       Caption = 'ListBox'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object FsListBox1: TFsListBox
         Left = 0
         Top = 0
@@ -7362,10 +7354,6 @@ object Form1: TForm1
     object TabSheet3: TTabSheet
       Caption = 'ListView'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object FsListView1: TFsListView
         Left = 0
         Top = 0
@@ -7412,6 +7400,42 @@ object Form1: TForm1
         Columns = <>
         TabOrder = 0
         ViewStyle = vsReport
+      end
+    end
+    object TabSheet6: TTabSheet
+      Caption = 'TabSheet6'
+      ImageIndex = 5
+      object Edit1: TEdit
+        Left = 72
+        Top = 48
+        Width = 401
+        Height = 25
+        TabOrder = 0
+        Text = '11111111'
+      end
+      object Edit2: TEdit
+        Left = 72
+        Top = 93
+        Width = 401
+        Height = 25
+        TabOrder = 1
+        Text = 'q1w2e3r4'
+      end
+      object Button1: TButton
+        Left = 392
+        Top = 240
+        Width = 75
+        Height = 25
+        Caption = 'Button1'
+        TabOrder = 2
+      end
+      object Edit3: TEdit
+        Left = 72
+        Top = 149
+        Width = 401
+        Height = 25
+        TabOrder = 3
+        Text = 'Edit1'
       end
     end
   end

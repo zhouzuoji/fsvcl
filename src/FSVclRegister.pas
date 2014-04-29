@@ -5,7 +5,7 @@ interface
 uses
   SysUtils, Classes, Windows, DesignEditors, DesignIntf, DesignMenus, ComponentDesigner,
   FSTheme, FSGraphics, FSControls, FSStdCtrls, FSSkinCtrls, FSScrollControls, FSNavTree,
-  FSEdit;
+  FSEdit, FSTrayIcon;
 
 procedure Register;
 
@@ -17,7 +17,7 @@ begin
     TFsGradientDrawer, TFsImage, TFsImageButton, TFsCoverButton, TFsCheckBox,
     TFsSkinButton, TFsSkinCheckBox, TFsCombobox,
     TFsPanel, TFsPageControl, TFsEdit, TFsButtonEdit, TFsFlatScrollBar,
-    TFsMemo, TFsListBox, TFsListView, TFsTreeView, TFsNavTree]);
+    TFsMemo, TFsListBox, TFsListView, TFsTreeView, TFsNavTree, TFsTrayIcon]);
 end;
 
 end.

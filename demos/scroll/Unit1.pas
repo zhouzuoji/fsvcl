@@ -22,6 +22,11 @@ type
     FsFlatScrollBar1: TFsFlatScrollBar;
     TabSheet5: TTabSheet;
     ListView1: TListView;
+    TabSheet6: TTabSheet;
+    Edit1: TEdit;
+    Edit2: TEdit;
+    Button1: TButton;
+    Edit3: TEdit;
     procedure FormCreate(Sender: TObject);
   public
     procedure InitListView;
@@ -34,14 +39,6 @@ var
 implementation
 
 {$R *.dfm}
-
-var
-  TITLE_BAR_HEIGHT: Integer = 32;
-  LEFT_BORDER_WIDTH: Integer = 4;
-  RIGHT_BORDER_WIDTH: Integer = 4;
-  BOTTOM_BORDER_WIDTH: Integer = 4;
-  BORDER_ICON_WIDTH: Integer = 24;
-  BORDER_ICON_HEIGHT: Integer = 24;
 
 { TForm1 }
 
