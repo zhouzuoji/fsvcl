@@ -1,9 +1,9 @@
-unit FsControls;
+unit FSControls;
 
 interface
 
 uses
-  SysUtils, Classes, Windows, Messages, Graphics, Forms, Controls, StdCtrls, ExtCtrls, Themes, FsGraphics;
+  SysUtils, Classes, Windows, Messages, Graphics, Forms, Controls, StdCtrls, ExtCtrls, Themes, FSVclBase, FSGraphics;
 
 type
   TFsScrollInfo = record
@@ -71,11 +71,24 @@ type
     property MinThumbLength;
   end;
 
-  TFsGraphicControl = class(TGraphicControl)
+  TFsGraphicControl = class(TControl)
+  private
+    FCanvas: TCanvas;
+    FBackground: TFsDrawable;
+    procedure WMPaint(var msgr: TWMPaint); message WM_PAINT;
+    procedure DrawBackground;
+    procedure PictureChanged(Sender: TObject);
+    procedure SetBackground(const Value: TFsDrawable);
   protected
     procedure GetContentDimension(out dim: TSize); virtual;
+    procedure Paint; virtual;
     function CanAutoSize(var NewWidth, NewHeight: Integer): Boolean; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    property Canvas: TCanvas read FCanvas;
+    property Background: TFsDrawable read FBackground write SetBackground;
   public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     function CheckAutoSize: Boolean;
     procedure AutoSizeAndInvalidate;
   end;
@@ -87,15 +100,20 @@ type
     FCapturePoint: TPoint;
     FScrollBarDrawer: TFsCustomScrollBar;
     FScrollBars: TScrollStyle;
-    procedure SetScrollBarDrawer(const Value: TFsCustomScrollBar);
-    procedure SetScrollBars(const Value: TScrollStyle);
-    function GetRealScrollBar: TFsCustomScrollBar;
+    FMouseWheelMultiple: Integer;
+    FBackground: TFsDrawable;
     function NeedScrollBar(out HScroll: Boolean): Boolean;
     procedure GetScrollInfo(var fsi: TFsScrollInfo; var vsi, hsi: TScrollInfo; const r: TRect);
     function ScrollHitTest(X, Y: Integer): TScrollHitTest;
     procedure ClipEdge(var r: TRect);
     procedure CheckScrollBarCapture(X, Y: Integer);
     procedure CheckScrollBarCaptureMouseUp(X, Y: Integer);
+    procedure DrawBackground;
+    procedure PictureChanged(Sender: TObject);
+    procedure SetScrollBarDrawer(const Value: TFsCustomScrollBar);
+    procedure SetScrollBars(const Value: TScrollStyle);
+    function GetRealScrollBar: TFsCustomScrollBar;
+    procedure SetBackground(const Value: TFsDrawable);
   protected
     FMouseInControl: Boolean;
     procedure WMCancelMode(var Message: TWMCancelMode); message WM_CANCELMODE;
@@ -120,8 +138,8 @@ type
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure CreateParams(var Params: TCreateParams); override;
     procedure PaintWindow(DC: HDC); override;
-    procedure Paint; virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure Paint; virtual;
     function DoScroll(msg: DWORD; wparam, lparam: Integer): Integer; virtual;
     function GetControlScrollInfo(var si: TScrollInfo; isVert: Boolean): Boolean; virtual;
     procedure DragThumb(BarFlag, ScrollCode, nTrackPos: Integer); virtual;
@@ -129,6 +147,8 @@ type
     property ScrollBars: TScrollStyle read FScrollBars write SetScrollBars;
     property ScrollBarDrawer: TFsCustomScrollBar read FScrollBarDrawer write SetScrollBarDrawer;
     property Canvas: TCanvas read FCanvas;
+    property MouseWheelMultiple: Integer read FMouseWheelMultiple write FMouseWheelMultiple;
+    property Background: TFsDrawable read FBackground write SetBackground;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -628,6 +648,86 @@ begin
   dim.cy := Self.Height;
 end;
 
+procedure TFsGraphicControl.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited;
+
+  if (Operation = opRemove) and (AComponent = FBackground) then
+  begin
+    FBackground := nil;
+    Self.Invalidate;
+  end;
+end;
+
+constructor TFsGraphicControl.Create(AOwner: TComponent);
+begin
+  inherited;
+  FCanvas := TControlCanvas.Create;
+  TControlCanvas(FCanvas).Control := Self;
+end;
+
+destructor TFsGraphicControl.Destroy;
+begin
+  if GetCaptureControl = Self then SetCaptureControl(nil);
+  FCanvas.Free;
+  inherited;
+end;
+
+procedure TFsGraphicControl.DrawBackground;
+begin
+
+end;
+
+procedure TFsGraphicControl.WMPaint(var msgr: TWMPaint);
+begin
+  if (msgr.DC <> 0) and not (csDestroying in ComponentState) then
+  begin
+    Canvas.Lock;
+    try
+      Canvas.Handle := msgr.DC;
+      try
+        DrawBackground;
+        Paint;
+      finally
+        Canvas.Handle := 0;
+      end;
+    finally
+      Canvas.Unlock;
+    end;
+  end;
+end;
+
+procedure TFsGraphicControl.Paint;
+begin
+end;
+
+procedure TFsGraphicControl.PictureChanged(Sender: TObject);
+begin
+  if Sender = FBackground then Self.Invalidate;
+end;
+
+procedure TFsGraphicControl.SetBackground(const Value: TFsDrawable);
+begin
+  if FBackground <> Value then
+  begin
+    if Assigned(FBackground) then
+    begin
+      FBackground.RemoveOnChangeListener(Self.PictureChanged);
+      FBackground.RemoveFreeNotification(Self);
+    end;
+
+    FBackground := Value;
+
+    if Assigned(FBackground) then
+    begin
+      FBackground.AddOnChangeListener(Self.PictureChanged);
+      FBackground.FreeNotification(Self);
+    end;
+
+    Self.Invalidate;
+  end;
+end;
+
 { TFsCustomControl }
 
 procedure TFsCustomControl.CheckScrollBarCapture(X, Y: Integer);
@@ -769,6 +869,7 @@ constructor TFsCustomControl.Create(AOwner: TComponent);
 begin
   inherited;
   TabStop := True;
+  FMouseWheelMultiple := 1;
   FCanvas := TControlCanvas.Create;
   TControlCanvas(FCanvas).Control := Self;
   BevelKind := bkFlat;
@@ -800,6 +901,17 @@ begin
     Self.DoScroll(WM_VSCROLL, MakeLong(ScrollCode, nTrackPos), 0)
   else
     Self.DoScroll(WM_HSCROLL, MakeLong(ScrollCode, nTrackPos), 0);
+end;
+
+procedure TFsCustomControl.DrawBackground;
+begin
+  if Assigned(FBackground) and not FBackground.Empty then
+  begin
+    FBackground.Draw(Canvas, ClientRect);
+  end
+  else begin
+    Windows.FillRect(Canvas.Handle, ClientRect, Self.Brush.Handle);
+  end;
 end;
 
 function TFsCustomControl.GetControlScrollInfo(var si: TScrollInfo; isVert: Boolean): Boolean;
@@ -958,10 +1070,18 @@ procedure TFsCustomControl.Notification(AComponent: TComponent; Operation: TOper
 begin
   inherited;
 
-  if (AComponent = FScrollBarDrawer) and (Operation = opRemove) then
+  if Operation = opRemove then
   begin
-    FScrollBarDrawer := nil;
-    Self.NCChanged;
+    if AComponent = FScrollBarDrawer  then
+    begin
+      FScrollBarDrawer := nil;
+      Self.NCChanged;
+    end
+    else if AComponent = FBackground then
+    begin
+      FBackground := nil;
+      Self.Invalidate;
+    end;      
   end;
 end;
 
@@ -1034,6 +1154,33 @@ begin
   end;
 end;
 
+procedure TFsCustomControl.PictureChanged(Sender: TObject);
+begin
+  if Sender = FBackground then Self.Invalidate;
+end;
+
+procedure TFsCustomControl.SetBackground(const Value: TFsDrawable);
+begin
+  if FBackground <> Value then
+  begin
+    if Assigned(FBackground) then
+    begin
+      FBackground.RemoveOnChangeListener(Self.PictureChanged);
+      FBackground.RemoveFreeNotification(Self);
+    end;
+
+    FBackground := Value;
+
+    if Assigned(FBackground) then
+    begin
+      FBackground.AddOnChangeListener(Self.PictureChanged);
+      FBackground.FreeNotification(Self);
+    end;
+
+    Self.Invalidate;
+  end;
+end;
+
 procedure TFsCustomControl.SetScrollBarDrawer(const Value: TFsCustomScrollBar);
 begin
   if Value <> FScrollBarDrawer then
@@ -1096,7 +1243,20 @@ begin
     else ThemeServices.DrawParentBackground(Handle, msgr.DC, nil, False);
   end
   else if not FDoubleBuffered or (msgr.DC = HDC(msgr.Unused)) then
-    Windows.FillRect(msgr.DC, ClientRect, Self.Brush.Handle);
+  begin
+    FCanvas.Lock;
+    try
+      FCanvas.Handle := msgr.DC;
+      try
+        TControlCanvas(FCanvas).UpdateTextFlags;
+        Self.DrawBackground;
+      finally
+        FCanvas.Handle := 0;
+      end;
+    finally
+      FCanvas.Unlock;
+    end;
+  end;
 
   msgr.Result := 1;
 end;
@@ -1147,6 +1307,7 @@ begin
 
   if (m <> 0) and Self.GetControlScrollInfo(si, True) and NeedScroll(si) then
   begin
+    m := m * FMouseWheelMultiple;
     nPos := si.nPos;
     nPos := nPos - m;
 

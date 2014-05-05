@@ -37,7 +37,7 @@
     <DelphiCompile Include="FSVclD2007R.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="..\src\FsControls.pas" />
+    <DCCReference Include="..\src\FSControls.pas" />
     <DCCReference Include="..\src\FSEdit.pas" />
     <DCCReference Include="..\src\FSEmptyForm.pas">
       <Form>EmptyForm</Form>

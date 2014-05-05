@@ -122,6 +122,8 @@ type
     FNodeIndent: Integer;
     FNodeTextOffset: Integer;
     FOnClickNode: TNodeClickEvent;
+    FHighlightColor: TColor;
+    FHighlightNode: TFsNavTreeNode;
     function GetNodePictrue(node: TFsNavTreeNode): TPicture;
     function GetNodeImageRect(node: TFsNavTreeNode; const r: TRect): TRect;
     function GetCatalogImageRect(catalog: TFsNavTreeCatalog; const r: TRect): TRect;
@@ -140,7 +142,9 @@ type
     procedure SetLeafImage(const Value: TPicture);
     procedure SetNodeIndent(const Value: Integer);
     procedure SetNodeTextOffset(const Value: Integer);
+    procedure SetHighlightColor(const Value: TColor);
   protected
+    procedure Resize; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure Paint; override;
     procedure DoCanScroll(IsVert: Boolean; var nPos: Integer); override;
@@ -165,6 +169,7 @@ type
     property ScrollBarDrawer;
     property ScrollBars;
     property Font;
+    property HighlightColor: TColor read FHighlightColor write SetHighlightColor;
     property CollapsedImage: TPicture read FCollapsedImage write SetCollapsedImage;
     property ExpandedImage: TPicture read FExpandedImage write SetExpandedImage;
     property LeafImage: TPicture read FLeafImage write SetLeafImage;
@@ -174,6 +179,7 @@ type
     property CatalogImageOffset: Integer read FCatalogImageOffset write SetCatalogImageOffset;
     property CatalogTextOffset: Integer read FCatalogTextOffset write SetCatalogTextOffset;
     property NodeTextOffset: Integer read FNodeTextOffset write SetNodeTextOffset;
+    property MouseWheelMultiple;
     property OnClickNode: TNodeClickEvent read FOnClickNode write FOnClickNode;
   end;    
 
@@ -190,6 +196,7 @@ begin
   FCatalogTextOffset := 10;
   FNodeTextOffset := 5;
   FNodeIndent := 4;
+  FHighlightColor := RGB(141, 203, 241);
   FCatalogFont := TFont.Create;
   FCollapsedImage := TPicture.Create;
   FExpandedImage := TPicture.Create;
@@ -215,6 +222,10 @@ end;
 
 procedure TFsNavTree.DoClickNode(node: TFsNavTreeNode);
 begin
+  FHighlightNode := node;
+
+  Self.Invalidate;
+  
   if Assigned(FOnClickNode) then
     FOnClickNode(Self, node);
 end;
@@ -277,6 +288,12 @@ begin
     r.Left := DrawInfo.ClientRect.Left + FCatalogImageOffset + (node.Level + 1) * FNodeIndent;
     r.Right := DrawInfo.ClientRect.Right;
     r.Bottom := DrawInfo.ClientRect.Top + DrawInfo.CurrentOffsetY - DrawInfo.OffsetY;
+
+    if node = FHighlightNode then
+    begin
+      Canvas.Brush.Color := FHighlightColor;
+      Canvas.FillRect(Rect(DrawInfo.ClientRect.Left, r.Top, DrawInfo.ClientRect.Right, r.Bottom));
+    end;
 
     if node.ChildNodes.Count = 0 then graph := FLeafImage.Graphic
     else if node.Expanded then graph := FExpandedImage.Graphic
@@ -468,21 +485,24 @@ var
 begin
   inherited;
 
-  htr := Self.HitTest(X, Y, area, obj);
+  if Button = mbLeft then
+  begin
+    htr := Self.HitTest(X, Y, area, obj);
 
-  case htr of
-    htNone: ;
+    case htr of
+      htNone: ;
 
-    htCatalogImage: ;
+      htCatalogImage: ;
 
-    htCatalogText: ;
+      htCatalogText: ;
 
-    htNodeImage:
-      if TFsNavTreeNode(obj).ChildNodes.Count > 0 then
-        TFsNavTreeNode(obj).Expanded := not TFsNavTreeNode(obj).Expanded;
+      htNodeImage:
+        if TFsNavTreeNode(obj).ChildNodes.Count > 0 then
+          TFsNavTreeNode(obj).Expanded := not TFsNavTreeNode(obj).Expanded;
 
-    htNodeText:
-      DoClickNode(TFsNavTreeNode(obj));
+      htNodeText:
+        DoClickNode(TFsNavTreeNode(obj));
+    end;
   end;
 end;
 
@@ -504,6 +524,12 @@ begin
 
   for i := 0 to FCatalogs.Count - 1 do
     if not Self.DrawCatalog(FCatalogs[i], DrawInfo) then Break;
+end;
+
+procedure TFsNavTree.Resize;
+begin
+  inherited;
+  UpdateScrollRange;
 end;
 
 procedure TFsNavTree.SetCatalogFont(const Value: TFont);
@@ -548,6 +574,15 @@ begin
   Self.Invalidate;
 end;
 
+procedure TFsNavTree.SetHighlightColor(const Value: TColor);
+begin
+  if FHighlightColor <> Value then
+  begin
+    FHighlightColor := Value;
+    Self.Invalidate;
+  end;
+end;
+
 procedure TFsNavTree.SetLeafImage(const Value: TPicture);
 begin
   FLeafImage.Assign(Value);
@@ -579,7 +614,6 @@ var
 begin
   ContentHeight := GetContentHeight;
   Windows.GetClientRect(Handle, rc);
-
   Self.SetScrollRange(True, 0, ContentHeight - 1, rc.Bottom - rc.Top);
 end;
 

@@ -4,15 +4,16 @@ interface
 
 uses
   SysUtils, Classes, Consts, Windows, Graphics, Controls, Messages, StdCtrls, ExtCtrls, ComCtrls,
-  Forms, FSVclBase, FSGraphics, FsControls, FSScrollControls, Themes;
+  Forms, FSVclBase, FSGraphics, FSControls, FSScrollControls, Themes;
 
 type
   TFsImage = class(TFsGraphicControl)
   private
     FPicture: TFsDrawable;
-    procedure PictureChanged(Sender: TObject; ID: TNotifyID);
+    procedure PictureChanged(Sender: TObject);
     procedure SetPicture(const Value: TFsDrawable);
   protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure GetContentDimension(out dim: TSize); override;
   public
     constructor Create(Owner: TComponent); override;
@@ -96,7 +97,7 @@ type
     FDisablePicture: TFsPictureDrawable;
     FMouseOverPicture: TFsPictureDrawable;
     FMouseDownPicture: TFsPictureDrawable;
-    procedure PictureChanged(Sender: TObject; ID: TNotifyID);
+    procedure PictureChanged(Sender: TObject);
     procedure SetPicture(const Value: TPicture);
     procedure SetMouseDownPicture(const Value: TPicture);
     procedure SetMouseOverPicture(const Value: TPicture);
@@ -105,7 +106,7 @@ type
     function GetMouseDownPicture: TPicture;
     function GetMouseOverPicture: TPicture;
     function GetPicture: TPicture;
-    function GetDrawable: TFsSingleDrawable;
+    function GetDrawable: TFsDrawable;
   protected
     function GetPictureSize(out width: Integer): Integer; override;
     procedure DrawPicture(const Rect: TRect); override;
@@ -133,7 +134,8 @@ type
     function GetCover: TFsDrawable;
   protected
     procedure PictureChanged(Sender: TObject);
-    procedure LinkedPictureChanged(Sender: TObject; ID: TNotifyID);
+    procedure LinkedPictureChanged(Sender: TObject);
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function GetPictureSize(out width: Integer): Integer; override;
     procedure DrawPicture(const Rect: TRect); override;
     procedure Paint; override;
@@ -500,7 +502,7 @@ type
     procedure SetUnCheckedPicture(const Value: TPicture);
     function GetCheckedPicture: TPicture;
     function GetUnCheckedPicture: TPicture;
-    procedure PictureChanged(Sender: TObject; ID: TNotifyID);
+    procedure PictureChanged(Sender: TObject);
   protected
     procedure GetImageSize(out w, h: Integer); override;
     procedure DrawMark(const Rect: TRect); override;
@@ -1082,7 +1084,7 @@ end;
 
 procedure TFsImageButton.DrawPicture(const Rect: TRect);
 var
-  drawable: TFsSingleDrawable;
+  drawable: TFsDrawable;
 begin
   drawable := Self.GetDrawable;
 
@@ -1095,7 +1097,7 @@ begin
   Result := FDisablePicture.Picture;
 end;
 
-function TFsImageButton.GetDrawable: TFsSingleDrawable;
+function TFsImageButton.GetDrawable: TFsDrawable;
 begin
   if not Self.Enabled then Result := FDisablePicture
   else if FAllowDown and FDown then Result := FMouseDownPicture       
@@ -1139,9 +1141,9 @@ begin
   end;
 end;
 
-procedure TFsImageButton.PictureChanged(Sender: TObject; ID: TNotifyID);
+procedure TFsImageButton.PictureChanged(Sender: TObject);
 begin
-  if (ID = niChange) and (Sender = GetDrawable) then Self.AutoSizeAndInvalidate;
+  if Sender = GetDrawable then Self.AutoSizeAndInvalidate;
 end;
 
 procedure TFsImageButton.SetPicture(const Value: TPicture);
@@ -1192,6 +1194,20 @@ begin
   end;
 end;
 
+procedure TFsImage.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited;
+
+  if Operation = opRemove then
+  begin
+    if AComponent = FPicture then
+    begin
+      FPicture := nil;
+      Self.AutoSizeAndInvalidate;
+    end;
+  end;
+end;
+
 procedure TFsImage.Paint;
 var
   r: TRect;
@@ -1201,12 +1217,7 @@ begin
   r := Rect(0, 0, Width, Height);
 
   if Assigned(FPicture) and not FPicture.Empty then
-  begin
-    if FPicture is TFsSingleDrawable then
-      TFsSingleDrawable(FPicture).Draw(Canvas, r)
-    else
-      TFsMultiFrameDrawable(FPicture).DrawFrame(Canvas.Handle, r, 0);
-  end;
+    TFsDrawable(FPicture).Draw(Canvas, r);
 
   if csDesigning in ComponentState then
   begin
@@ -1216,20 +1227,9 @@ begin
   end;
 end;
 
-procedure TFsImage.PictureChanged(Sender: TObject; ID: TNotifyID);
+procedure TFsImage.PictureChanged(Sender: TObject);
 begin
-  if ID = niDestroy then
-  begin
-    if Sender = FPicture then
-    begin
-      FPicture := nil;
-      Self.AutoSizeAndInvalidate;
-    end;
-  end
-  else if ID = niChange then
-  begin
-    if Sender = FPicture then Self.AutoSizeAndInvalidate;
-  end;
+  if Sender = FPicture then Self.AutoSizeAndInvalidate;
 end;
 
 procedure TFsImage.SetPicture(const Value: TFsDrawable);
@@ -1237,12 +1237,18 @@ begin
   if FPicture <> Value then
   begin
     if Assigned(FPicture) then
+    begin
       FPicture.RemoveOnChangeListener(Self.PictureChanged);
+      FPicture.RemoveFreeNotification(Self);
+    end;
 
     FPicture := Value;
 
     if Assigned(FPicture) then
+    begin
       FPicture.AddOnChangeListener(Self.PictureChanged);
+      FPicture.FreeNotification(Self);
+    end;
       
     Self.AutoSizeAndInvalidate;
   end;
@@ -1417,13 +1423,10 @@ begin
   Result := FUnCheckedPicture.Picture;
 end;
 
-procedure TFsCheckBox.PictureChanged(Sender: TObject; ID: TNotifyID);
+procedure TFsCheckBox.PictureChanged(Sender: TObject);
 begin
-  if ID = niChange then
-  begin
-    if ((Sender = FCheckedPicture) and FChecked) or ((Sender = FUnCheckedPicture) and not FChecked) then
-      Self.AutoSizeAndInvalidate;
-  end;
+  if ((Sender = FCheckedPicture) and FChecked) or ((Sender = FUnCheckedPicture) and not FChecked) then
+    Self.AutoSizeAndInvalidate;
 end;
 
 procedure TFsCheckBox.SetCheckedPicture(const Value: TPicture);
@@ -1482,17 +1485,32 @@ begin
   end;
 end;
 
-procedure TFsCoverButton.LinkedPictureChanged(Sender: TObject; ID: TNotifyID);
+procedure TFsCoverButton.LinkedPictureChanged(Sender: TObject);
+begin
+  if Sender = GetCover then Self.AutoSizeAndInvalidate;
+end;
+
+procedure TFsCoverButton.Notification(AComponent: TComponent; Operation: TOperation);
 var
   changed: Boolean;
 begin
-  changed := (Sender = FDownCover) or (Sender = FHoverCover);
+  inherited;
 
-  if ID = niDestroy then
+  changed := False;
+
+  if Operation = opRemove then
   begin
-    if Sender = FDownCover then FDownCover := nil;
+    if AComponent = FDownCover then
+    begin
+      FDownCover := nil;
+      changed := True;
+    end;
 
-    if Sender = FHoverCover then FHoverCover := nil;
+    if AComponent = FHoverCover then
+    begin
+      FHoverCover := nil;
+      changed := True;
+    end;
   end;
 
   if changed then Self.AutoSizeAndInvalidate;
@@ -1523,10 +1541,7 @@ begin
     r.Top := (Self.Height - h) div 2;
     r.Bottom := r.Top + h;
 
-    if cover is TFsSingleDrawable then
-      TFsSingleDrawable(cover).Draw(Self.Canvas, r)
-    else if cover is TFsMultiFrameDrawable then
-      TFsMultiFrameDrawable(cover).DrawFrame(Self.Canvas.Handle, r, 0);
+    cover.Draw(Self.Canvas, r);
   end;
 
   inherited;
@@ -1542,12 +1557,18 @@ begin
   if FDownCover <> Value then
   begin
     if Assigned(FDownCover) then
+    begin
       FDownCover.RemoveOnChangeListener(Self.LinkedPictureChanged);
+      FDownCover.RemoveFreeNotification(Self);
+    end;
 
     FDownCover := Value;
 
     if Assigned(FDownCover) then
+    begin
       FDownCover.AddOnChangeListener(Self.LinkedPictureChanged);
+      FDownCover.FreeNotification(Self);
+    end;
 
     Self.AutoSizeAndInvalidate;
   end;
@@ -1558,12 +1579,18 @@ begin
   if FHoverCover <> Value then
   begin
     if Assigned(FHoverCover) then
+    begin
       FHoverCover.RemoveOnChangeListener(Self.LinkedPictureChanged);
+      FHoverCover.RemoveFreeNotification(Self);
+    end;
 
     FHoverCover := Value;
 
     if Assigned(FHoverCover) then
+    begin
       FHoverCover.AddOnChangeListener(Self.LinkedPictureChanged);
+      FHoverCover.FreeNotification(Self);
+    end;
 
     Self.AutoSizeAndInvalidate;
   end;

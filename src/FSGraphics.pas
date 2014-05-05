@@ -9,19 +9,20 @@ type
   TFsDrawable = class(TComponent)
   private
     FUpdateCount: Integer;
-    FOnChangeListeners: array of TExNotifyEvent;
+    FOnChangeListeners: array of TNotifyEvent;
   protected
-    procedure DoChange(ID: TNotifyID);
+    procedure DoChange;
     function GetHeight: Integer; virtual;
     function GetWidth: Integer; virtual;
-    function GetEmpty: Boolean; virtual; 
+    function GetEmpty: Boolean; virtual;
   public
     constructor Create(Owner: TComponent); override;
     destructor Destroy; override;
     function HorzSafeStretch: Boolean; virtual;
     function VertSafeStretch: Boolean; virtual;
-    procedure AddOnChangeListener(listener: TExNotifyEvent);
-    procedure RemoveOnChangeListener(listener: TExNotifyEvent);
+    procedure Draw(ACanvas: TCanvas; const Rect: TRect); virtual; abstract;
+    procedure AddOnChangeListener(listener: TNotifyEvent);
+    procedure RemoveOnChangeListener(listener: TNotifyEvent);
     procedure BeginUpdate;
     procedure EndUpdate;
     property Empty: Boolean read GetEmpty;
@@ -29,12 +30,7 @@ type
     property Height: Integer read GetHeight;
   end;
 
-  TFsSingleDrawable = class(TFsDrawable)
-  public
-    procedure Draw(ACanvas: TCanvas; const Rect: TRect); virtual; abstract;
-  end;
-
-  TFsSVGDrawable = class(TFsSingleDrawable)
+  TFsSVGDrawable = class(TFsDrawable)
   private
     FBorderColor: TColor;
     FBorderWidth: Integer;
@@ -92,7 +88,7 @@ type
     procedure DrawFrame(DC: HDC; const Rect: TRect; Index: Integer); virtual; abstract;
   end;
 
-  TFsPictureDrawable = class(TFsSingleDrawable)
+  TFsPictureDrawable = class(TFsDrawable)
   private
     FPicture: TPicture;
     procedure PictureChanged(Sender: TObject);
@@ -142,6 +138,7 @@ type
     procedure Assign(Source: TPersistent); override;
     function HorzSafeStretch: Boolean; override;
     function VertSafeStretch: Boolean; override;
+    procedure Draw(ACanvas: TCanvas; const Rect: TRect); override;
     procedure DrawFrame(DC: HDC; const Rect: TRect; Index: Integer); override;
   published
     property Graphic: TBitmap read FGraphic write SetGraphic;
@@ -346,7 +343,7 @@ begin
     FMarginTop := TFsNinePitchDrawable(Source).MarginTop;
     FMarginBottom := TFsNinePitchDrawable(Source).MarginBottom;
     FGraphic.Assign(TFsNinePitchDrawable(Source).FGraphic);
-    DoChange(niChange);
+    DoChange;
   end
   else inherited;
 end;
@@ -373,6 +370,11 @@ destructor TFsNinePitchDrawable.Destroy;
 begin
   FGraphic.Free;
   inherited;
+end;
+
+procedure TFsNinePitchDrawable.Draw(ACanvas: TCanvas; const Rect: TRect);
+begin
+  Self.DrawFrame(ACanvas.Handle, Rect, 0);
 end;
 
 procedure TFsNinePitchDrawable.DrawFrame(DC: HDC; const Rect: TRect; Index: Integer);
@@ -454,7 +456,7 @@ end;
 
 procedure TFsNinePitchDrawable.PictureChanged(Sender: TObject);
 begin
-  DoChange(niChange);
+  DoChange;
 end;
 
 procedure TFsNinePitchDrawable.SetColCount(const Value: Integer);
@@ -462,7 +464,7 @@ begin
   if (FColCount <> Value) and (Value >= 1) then
   begin
     FColCount := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -471,7 +473,7 @@ begin
   if FGraphic <> Value then
   begin
     FGraphic.Assign(Value);
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -481,7 +483,7 @@ begin
   if field <> value then
   begin
     field := value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -510,7 +512,7 @@ begin
   if (FRowCount <> Value) and (Value >= 1) then
   begin
     FRowCount := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -519,7 +521,7 @@ begin
   if FGraphic.Transparent <> Value then
   begin
     FGraphic.Transparent := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -528,7 +530,7 @@ begin
   if FGraphic.TransparentColor <> Value then
   begin
     FGraphic.TransparentColor := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -544,7 +546,7 @@ end;
 
 { TFsDrawable }
 
-procedure TFsDrawable.AddOnChangeListener(listener: TExNotifyEvent);
+procedure TFsDrawable.AddOnChangeListener(listener: TNotifyEvent);
 var
   i: Integer;
 begin
@@ -572,21 +574,20 @@ end;
 
 destructor TFsDrawable.Destroy;
 begin
-  DoChange(niDestroy);
   SetLength(FOnChangeListeners, 0);
   inherited;
 end;
 
-procedure TFsDrawable.DoChange(ID: TNotifyID);
+procedure TFsDrawable.DoChange;
 var
   i: Integer;
 begin
-  if (FUpdateCount = 0) or (ID = niDestroy) then
+  if FUpdateCount = 0 then
   begin
     i := High(FOnChangeListeners);
     while i >= Low(FOnChangeListeners) do
     begin
-      FOnChangeListeners[i](Self, ID);
+      FOnChangeListeners[i](Self);
       Dec(i);
       if i > High(FOnChangeListeners) then
         i := High(FOnChangeListeners);
@@ -598,7 +599,7 @@ procedure TFsDrawable.EndUpdate;
 begin
   Dec(FUpdateCount);
 
-  if FUpdateCount = 0 then DoChange(niChange);
+  if FUpdateCount = 0 then DoChange;
 end;
 
 function TFsDrawable.GetEmpty: Boolean;
@@ -616,7 +617,7 @@ begin
   Result := -1;
 end;
 
-procedure TFsDrawable.RemoveOnChangeListener(listener: TExNotifyEvent);
+procedure TFsDrawable.RemoveOnChangeListener(listener: TNotifyEvent);
 var
   i, j: Integer;
 begin
@@ -683,7 +684,7 @@ end;
 
 procedure TFsPictureDrawable.PictureChanged(Sender: TObject);
 begin
-  DoChange(niChange);
+  DoChange;
 end;
 
 procedure TFsPictureDrawable.SetPicture(const Value: TPicture);
@@ -731,7 +732,7 @@ begin
   if FBottomRightColor <> Value then
   begin
     FBottomRightColor := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -740,7 +741,7 @@ begin
   if FTopLeftColor <> Value then
   begin
     FTopLeftColor := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -749,7 +750,7 @@ begin
   if FVertical <> Value then
   begin
     FVertical := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -779,7 +780,7 @@ begin
   if FBorderColor <> Value then
   begin
     FBorderColor := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -788,7 +789,7 @@ begin
   if (FBorderWidth <> Value) and (Value >= 0) then
   begin
     FBorderWidth := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -797,7 +798,7 @@ begin
   if FBrushStyle <> Value then
   begin
     FBrushStyle := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 
@@ -806,7 +807,7 @@ begin
   if FColor <> Value then
   begin
     FColor := Value;
-    DoChange(niChange);
+    DoChange;
   end;
 end;
 

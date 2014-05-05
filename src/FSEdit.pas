@@ -4,7 +4,7 @@ interface
 
 uses
   SysUtils, Classes, Consts, Windows, Graphics, Controls, Messages, StdCtrls, ExtCtrls, ComCtrls,
-  Forms, Dialogs, FSVclBase, FSGraphics, FsControls, FSScrollControls, Themes;
+  Forms, Dialogs, FSVclBase, FSGraphics, FSControls, FSScrollControls, Themes;
 
 type
   TFsCustomEdit = class(TCustomEdit)

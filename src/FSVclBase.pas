@@ -9,9 +9,6 @@ type
   TMouseFlags = (mfMouseOver, mfLButtonDown, mfRButtonDown);
   TMouseFlag = set of TMouseFlags;
 
-  TNotifyID = (niChange, niDestroy);
-  TExNotifyEvent = procedure(Sender: TObject; ID: TNotifyID) of object;
-
 procedure GetMsgCursor(out pt: TPoint);
 
 implementation

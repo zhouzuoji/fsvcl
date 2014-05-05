@@ -3,7 +3,7 @@ unit FSScrollControls;
 interface
 
 uses
-  SysUtils, Classes, Consts, Windows, Graphics, Controls, Messages, StdCtrls, ExtCtrls, FsGraphics, FsControls;
+  SysUtils, Classes, Consts, Windows, Graphics, Controls, Messages, StdCtrls, ExtCtrls, FsGraphics, FSControls;
 
 type
   TFsScrollContainer = class(TFsCustomControl)

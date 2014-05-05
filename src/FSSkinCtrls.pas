@@ -4,7 +4,7 @@ interface
 
 uses
   SysUtils, Classes, Consts, Windows, Graphics, Controls, Messages, StdCtrls, ExtCtrls, ComCtrls,
-  FSVclBase, FSGraphics, FsControls, FSScrollControls, Themes, FSStdCtrls;
+  FSVclBase, FSGraphics, FSControls, FSScrollControls, Themes, FSStdCtrls;
 
 type
   TFsSkinButton = class(TFsCustomButton)
@@ -13,13 +13,15 @@ type
     FDisablePicture: TFsDrawable;
     FMouseOverPicture: TFsDrawable;
     FMouseDownPicture: TFsDrawable;
-    procedure PictureChanged(Sender: TObject; ID: TNotifyID);
+    procedure SetLinkDrawable(var field: TFsDrawable; value: TFsDrawable);
+    procedure PictureChanged(Sender: TObject);
     procedure SetPicture(const Value: TFsDrawable);
     procedure SetMouseDownPicture(const Value: TFsDrawable);
     procedure SetMouseOverPicture(const Value: TFsDrawable);
     procedure SetDisablePicture(const Value: TFsDrawable);
     function GetDrawable: TFsDrawable;
   protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     function GetPictureSize(out width: Integer): Integer; override;
     procedure DrawPicture(const Rect: TRect); override;
   public
@@ -40,14 +42,13 @@ type
     FUnCheckedPicture: TFsDrawable;
     procedure SetCheckedPicture(const Value: TFsDrawable);
     procedure SetUnCheckedPicture(const Value: TFsDrawable);
-    procedure CheckedPictureChanged(Sender: TObject; ID: TNotifyID);
-    procedure UnCheckedPictureChanged(Sender: TObject; ID: TNotifyID);
+    procedure PictureChanged(Sender: TObject);
   protected
     function GetDrawable: TFsDrawable;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure GetImageSize(out w, h: Integer); override;
     procedure DrawMark(const Rect: TRect); override;
   public
-    constructor Create(Owner: TComponent); override;
     destructor Destroy; override;
   published
     property CheckedPicture: TFsDrawable read FCheckedPicture write SetCheckedPicture;
@@ -74,12 +75,7 @@ begin
   drawable := Self.GetDrawable;
 
   if Assigned(drawable) then
-  begin
-    if drawable is TFsSingleDrawable then
-      TFsSingleDrawable(drawable).Draw(Self.Canvas, Rect)
-    else if drawable is TFsMultiFrameDrawable then
-      TFsMultiFrameDrawable(drawable).DrawFrame(Canvas.Handle, Rect, 0);
-  end;
+    drawable.Draw(Self.Canvas, Rect);
 end;
 
 function TFsSkinButton.GetDrawable: TFsDrawable;
@@ -111,116 +107,94 @@ begin
   end;
 end;
 
-procedure TFsSkinButton.PictureChanged(Sender: TObject; ID: TNotifyID);
+procedure TFsSkinButton.Notification(AComponent: TComponent; Operation: TOperation);
+var
+  changed: Boolean;
 begin
-  if ID = niDestroy then
+  inherited;
+
+  changed := False;
+
+  if AComponent = FPicture then
   begin
-    if Sender = FPicture then
-    begin
-      FPicture := nil;
-      Self.AutoSizeAndInvalidate;
-    end;
-
-    if Sender = FDisablePicture then
-    begin
-      FDisablePicture := nil;
-      Self.AutoSizeAndInvalidate;
-    end;
-
-    if Sender = FMouseOverPicture then
-    begin
-      FMouseOverPicture := nil;
-      Self.AutoSizeAndInvalidate;
-    end;
-
-    if Sender = FMouseDownPicture then
-    begin
-      FMouseDownPicture := nil;
-      Self.AutoSizeAndInvalidate;
-    end;
-  end
-  else if ID = niChange then
-  begin
-    if Sender = GetDrawable then Self.AutoSizeAndInvalidate;
+    FPicture := nil;
+    changed := True;
   end;
+
+  if AComponent = FDisablePicture then
+  begin
+    FDisablePicture := nil;
+    changed := True;
+  end;
+
+  if AComponent = FMouseOverPicture then
+  begin
+    FMouseOverPicture := nil;
+    changed := True;
+  end;
+
+  if AComponent = FMouseDownPicture then
+  begin
+    FMouseDownPicture := nil;
+    changed := True;
+  end;
+
+  if changed then Self.AutoSizeAndInvalidate;
+end;
+
+procedure TFsSkinButton.PictureChanged(Sender: TObject);
+begin
+  if Sender = GetDrawable then Self.AutoSizeAndInvalidate;
 end;
 
 procedure TFsSkinButton.SetDisablePicture(const Value: TFsDrawable);
 begin
-  if FDisablePicture <> Value then
+  SetLinkDrawable(FDisablePicture, Value);
+end;
+
+procedure TFsSkinButton.SetLinkDrawable(var field: TFsDrawable; value: TFsDrawable);
+begin
+  if field <> Value then
   begin
-    if Assigned(FDisablePicture) then
-      FDisablePicture.RemoveOnChangeListener(Self.PictureChanged);
+    if Assigned(field) then
+    begin
+      field.RemoveOnChangeListener(Self.PictureChanged);
+      field.RemoveFreeNotification(Self);
+    end;
 
-    FDisablePicture := Value;
+    field := Value;
 
-    if Assigned(FDisablePicture) then
-      FDisablePicture.AddOnChangeListener(Self.PictureChanged);
-      
+    if Assigned(field) then
+    begin
+      field.AddOnChangeListener(Self.PictureChanged);
+      field.FreeNotification(Self);
+    end;
+
     Self.AutoSizeAndInvalidate;
   end;
 end;
 
 procedure TFsSkinButton.SetMouseDownPicture(const Value: TFsDrawable);
 begin
-  if FMouseDownPicture <> Value then
-  begin
-    if Assigned(FMouseDownPicture) then
-      FMouseDownPicture.RemoveOnChangeListener(Self.PictureChanged);
-
-    FMouseDownPicture := Value;
-
-    if Assigned(FMouseDownPicture) then
-      FMouseDownPicture.AddOnChangeListener(Self.PictureChanged);
-      
-    Self.AutoSizeAndInvalidate;
-  end;
+  SetLinkDrawable(FMouseDownPicture, Value);
 end;
 
 procedure TFsSkinButton.SetMouseOverPicture(const Value: TFsDrawable);
 begin
-  if FMouseOverPicture <> Value then
-  begin
-    if Assigned(FMouseOverPicture) then
-      FMouseOverPicture.RemoveOnChangeListener(Self.PictureChanged);
-
-    FMouseOverPicture := Value;
-
-    if Assigned(FMouseOverPicture) then
-      FMouseOverPicture.AddOnChangeListener(Self.PictureChanged);
-      
-    Self.AutoSizeAndInvalidate;
-  end;
+  SetLinkDrawable(FMouseOverPicture, Value);
 end;
 
 procedure TFsSkinButton.SetPicture(const Value: TFsDrawable);
 begin
-  if FPicture <> Value then
-  begin
-    if Assigned(FPicture) then
-      FPicture.RemoveOnChangeListener(Self.PictureChanged);
-
-    FPicture := Value;
-
-    if Assigned(FPicture) then
-      FPicture.AddOnChangeListener(Self.PictureChanged);
-      
-    Self.AutoSizeAndInvalidate;
-  end;
+  SetLinkDrawable(FPicture, Value);
 end;
 
 { TFsSkinCheckBox }
 
-procedure TFsSkinCheckBox.CheckedPictureChanged(Sender: TObject; ID: TNotifyID);
+procedure TFsSkinCheckBox.PictureChanged(Sender: TObject);
 begin
-  if ID = niDestroy then FCheckedPicture := nil;
-  Self.AutoSizeAndInvalidate;
-end;
-
-constructor TFsSkinCheckBox.Create(Owner: TComponent);
-begin
-  inherited;
-
+  if ( Checked and (Sender = FCheckedPicture) ) or ( not Checked and (Sender = FUnCheckedPicture) ) then
+    Self.AutoSizeAndInvalidate;
 end;
 
 destructor TFsSkinCheckBox.Destroy;
@@ -238,10 +212,8 @@ begin
 
   drawable := Self.GetDrawable;
 
-  if drawable is TFsSingleDrawable then
-    TFsSingleDrawable(drawable).Draw(Canvas, Rect)
-  else if drawable is TFsMultiFrameDrawable then
-    TFsMultiFrameDrawable(drawable).DrawFrame(Canvas.Handle, Rect, 0);
+  if Assigned(drawable) then
+    drawable.Draw(Canvas, Rect);
 end;
 
 function TFsSkinCheckBox.GetDrawable: TFsDrawable;
@@ -269,17 +241,47 @@ begin
   end;
 end;
 
+procedure TFsSkinCheckBox.Notification(AComponent: TComponent; Operation: TOperation);
+var
+  changed: Boolean;
+begin
+  inherited;
+
+  changed := False;
+
+  if AComponent = FCheckedPicture then
+  begin
+    FCheckedPicture := nil;
+
+    if Checked then changed := True;
+  end;
+
+  if AComponent = FUnCheckedPicture then
+  begin
+    FUnCheckedPicture := nil;
+    if not Checked then changed := True;
+  end;
+
+  if changed then Self.AutoSizeAndInvalidate;
+end;
+
 procedure TFsSkinCheckBox.SetCheckedPicture(const Value: TFsDrawable);
 begin
   if FCheckedPicture <> Value then
   begin
     if Assigned(FCheckedPicture) then
-      FCheckedPicture.RemoveOnChangeListener(Self.CheckedPictureChanged);
+    begin
+      FCheckedPicture.RemoveOnChangeListener(Self.PictureChanged);
+      FCheckedPicture.RemoveFreeNotification(Self);
+    end;
 
     FCheckedPicture := Value;
 
     if Assigned(FCheckedPicture) then
-      FCheckedPicture.AddOnChangeListener(Self.CheckedPictureChanged);
+    begin
+      FCheckedPicture.AddOnChangeListener(Self.PictureChanged);
+      FCheckedPicture.FreeNotification(Self);
+    end;
       
     Self.AutoSizeAndInvalidate;
   end;
@@ -290,21 +292,21 @@ begin
   if FUnCheckedPicture <> Value then
   begin
     if Assigned(FUnCheckedPicture) then
-      FUnCheckedPicture.RemoveOnChangeListener(Self.UnCheckedPictureChanged);
+    begin
+      FUnCheckedPicture.RemoveOnChangeListener(Self.PictureChanged);
+      FUnCheckedPicture.RemoveFreeNotification(Self);
+    end;
 
     FUnCheckedPicture := Value;
 
     if Assigned(FUnCheckedPicture) then
-      FUnCheckedPicture.AddOnChangeListener(Self.UnCheckedPictureChanged);
+    begin
+      FUnCheckedPicture.AddOnChangeListener(Self.PictureChanged);
+      FUnCheckedPicture.FreeNotification(Self);
+    end;
       
     Self.AutoSizeAndInvalidate;
   end;
-end;
-
-procedure TFsSkinCheckBox.UnCheckedPictureChanged(Sender: TObject; ID: TNotifyID);
-begin
-  if ID = niDestroy then FUnCheckedPicture := nil;
-  Self.AutoSizeAndInvalidate;
 end;
 
 end.

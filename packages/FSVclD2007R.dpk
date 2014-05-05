@@ -34,7 +34,7 @@ requires
   vclx;
 
 contains
-  FsControls in '..\src\FsControls.pas',
+  FSControls in '..\src\FSControls.pas',
   FSGraphics in '..\src\FSGraphics.pas',
   FSNavTree in '..\src\FSNavTree.pas',
   FSScrollControls in '..\src\FSScrollControls.pas',
