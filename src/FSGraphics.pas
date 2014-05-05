@@ -21,6 +21,7 @@ type
     function HorzSafeStretch: Boolean; virtual;
     function VertSafeStretch: Boolean; virtual;
     procedure Draw(ACanvas: TCanvas; const Rect: TRect); virtual; abstract;
+    procedure DrawCenter(ACanvas: TCanvas; const Rect: TRect); 
     procedure AddOnChangeListener(listener: TNotifyEvent);
     procedure RemoveOnChangeListener(listener: TNotifyEvent);
     procedure BeginUpdate;
@@ -593,6 +594,33 @@ begin
         i := High(FOnChangeListeners);
     end;
   end;
+end;
+
+procedure TFsDrawable.DrawCenter(ACanvas: TCanvas; const Rect: TRect);
+var
+  r: TRect;
+begin
+  if VertSafeStretch then
+  begin
+    r.Top := Rect.Top;
+    r.Bottom := Rect.Bottom;
+  end
+  else begin
+    r.Top := Rect.Top + (Rect.Bottom - Rect.Top - Height) div 2;
+    r.Bottom := r.Top + Height;
+  end;
+
+  if HorzSafeStretch then
+  begin
+    r.Left := Rect.Left;
+    r.Right := Rect.Right;
+  end
+  else begin
+    r.Left := Rect.Left + (Rect.Right - Rect.Left - Width) div 2;
+    r.Right := r.Left + Width;
+  end;
+
+  Self.Draw(ACanvas, r);
 end;
 
 procedure TFsDrawable.EndUpdate;

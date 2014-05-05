@@ -28,6 +28,7 @@ type
     destructor Destroy; override;
   published
     property AllowDown;
+    property Background;
     property Down;
     property Group;
     property Picture: TFsDrawable read FPicture write SetPicture;
@@ -53,6 +54,91 @@ type
   published
     property CheckedPicture: TFsDrawable read FCheckedPicture write SetCheckedPicture;
     property UnCheckedPicture: TFsDrawable read FUnCheckedPicture write SetUnCheckedPicture;
+  end;
+
+  TFsSkinCombobox = class(TFsCustomCombobox)
+  private
+    FPicture: TFsDrawable;
+    FDroppedDownPicture: TFsDrawable;
+    procedure PictureChanged(Sender: TObject);
+    procedure SetPicture(const Value: TFsDrawable);
+    procedure SetDroppedDownPicture(const Value: TFsDrawable);
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure DrawButton(const Rect: TRect); override;
+  public
+    destructor Destroy; override;
+  published
+    property Align;
+    property AutoComplete default True;
+    property AutoCompleteDelay default 500;
+    property AutoDropDown default False;
+    property AutoCloseUp default False;
+    property BevelEdges;
+    property BevelInner;
+    property BevelKind default bkNone;
+    property BevelOuter;
+    property Style; {Must be published before Items}
+    property Anchors;
+    property BiDiMode;
+    property CharCase;
+    property Color;
+    property Constraints;
+    property Ctl3D;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property DropDownCount;
+    property Enabled;
+    property ImeMode;
+    property ImeName;
+    property ItemHeight;
+    property ItemIndex default -1;
+    property MaxLength;
+    property ParentBiDiMode;
+    property ParentColor;
+    property ParentCtl3D;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property Sorted;
+    property TabOrder;
+    property TabStop;
+    property Text;
+    property Visible;
+    property OnChange;
+    property OnClick;
+    property OnCloseUp;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnDrawItem;
+    property OnDropDown;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnMeasureItem;
+    property OnMouseEnter;
+    property OnMouseLeave;
+    property OnSelect;
+    property OnStartDock;
+    property OnStartDrag;
+    property Items; { Must be published after OnMeasureItem }
+    property ButtonWidth;
+    property BorderColor;
+    property BorderColorHover;
+    property ShowTip;
+    property Tip;
+    property TipFont;
+    property TextFont;
+    property Picture: TFsDrawable read FPicture write SetPicture;
+    property DroppedDownPicture: TFsDrawable read FDroppedDownPicture write SetDroppedDownPicture;
   end;
 
 implementation
@@ -306,6 +392,103 @@ begin
     end;
       
     Self.AutoSizeAndInvalidate;
+  end;
+end;
+
+{ TFsSkinCombobox }
+
+procedure TFsSkinCombobox.PictureChanged(Sender: TObject);
+begin
+  if ( not Self.DroppedDown and (Sender = FPicture) ) or ( Self.DroppedDown and (Sender = FDroppedDownPicture) ) then
+    Self.Invalidate;    
+end;
+
+destructor TFsSkinCombobox.Destroy;
+begin
+  SetPicture(nil);
+  SetDroppedDownPicture(nil);
+  inherited;
+end;
+
+procedure TFsSkinCombobox.DrawButton(const Rect: TRect);
+var
+  drawable: TFsDrawable;
+begin
+  inherited;
+
+  if Self.DroppedDown then drawable := FDroppedDownPicture
+  else drawable := FPicture;
+
+  if not Assigned(drawable) then drawable := FPicture;
+
+  if Assigned(drawable) then drawable.DrawCenter(Canvas, Rect);
+end;
+
+procedure TFsSkinCombobox.Notification(AComponent: TComponent; Operation: TOperation);
+var
+  changed: Boolean;
+begin
+  inherited;
+
+  changed := False;
+
+  if AComponent = FPicture then
+  begin
+    FPicture := nil;
+
+    if not DroppedDown then changed := True;
+  end;
+
+  if AComponent = FDroppedDownPicture then
+  begin
+    FDroppedDownPicture := nil;
+    if DroppedDown then changed := True;
+  end;
+
+  if changed then Self.Invalidate;
+end;
+
+procedure TFsSkinCombobox.SetPicture(const Value: TFsDrawable);
+begin
+  if FPicture <> Value then
+  begin
+    if Assigned(FPicture) then
+    begin
+      FPicture.RemoveOnChangeListener(Self.PictureChanged);
+      FPicture.RemoveFreeNotification(Self);
+    end;
+
+    FPicture := Value;
+
+    if Assigned(FPicture) then
+    begin
+      FPicture.AddOnChangeListener(Self.PictureChanged);
+      FPicture.FreeNotification(Self);
+    end;
+
+    Self.Invalidate;
+  end;
+end;
+
+procedure TFsSkinCombobox.SetDroppedDownPicture(const Value: TFsDrawable);
+begin
+  if FDroppedDownPicture <> Value then
+  begin
+    if Assigned(FDroppedDownPicture) then
+    begin
+      FDroppedDownPicture.RemoveOnChangeListener(Self.PictureChanged);
+      FDroppedDownPicture.RemoveFreeNotification(Self);
+    end;
+
+    FDroppedDownPicture := Value;
+
+    if Assigned(FDroppedDownPicture) then
+    begin
+      FDroppedDownPicture.AddOnChangeListener(Self.PictureChanged);
+      FDroppedDownPicture.FreeNotification(Self);
+    end;
+
+    Self.Invalidate;
   end;
 end;
 

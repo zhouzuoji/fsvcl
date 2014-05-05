@@ -37,23 +37,22 @@ type
   private
     FShowCaption: Boolean;
     FLayout: TFsImageButtonLayout;
-    FSpace: Integer;
     FDown: Boolean;
     FGroup: Integer;
     FAllowDown: Boolean;
+    FSpace: Integer;
     procedure SetShowCaption(const Value: Boolean);
     procedure SetLayout(const Value: TFsImageButtonLayout);
-    procedure SetSpace(const Value: Integer);
     procedure DrawPictureLeft;
     procedure DrawPictureRight;
     procedure DrawPictureTop;
     procedure DrawPictureBottom;
     procedure DrawTextInPicture;
     procedure DrawTextInStretchPicture;
-    procedure DrawButtonSurface;
     procedure SetDown(const Value: Boolean);
     procedure SetGroup(const Value: Integer);
     procedure SetAllowDown(const Value: Boolean);
+    procedure SetSpace(const Value: Integer);
   protected
     FMouseFlag: TMouseFlag;
     procedure SetOtherUp;
@@ -335,10 +334,8 @@ type
   public
   end;
 
-  TFsCombobox = class(TCustomComboBox)
+  TFsCustomCombobox = class(TCustomComboBox)
   private
-    FSpace: Integer;
-    FButtonPicture: TPicture;
     FBorderColor: TColor;
     FBorderColorHover: TColor;
     FMouseInControlLastPaint: Boolean;
@@ -350,14 +347,11 @@ type
     FShowingTip: Boolean;
     FShowTip: Boolean;
     FNumberOnly: Boolean;
+    FButtonWidth: Integer;
     procedure TipFontChanged(Sender: TObject);
     procedure TextFontChanged(Sender: TObject);
-    procedure ButtonPictureChanged(Sender: TObject);
     procedure AdjustEditBoundsRect;
     procedure CalcEditBoundsRect(var r: TRect);
-    procedure DrawButton;
-    procedure SetSpace(const Value: Integer);
-    procedure SetButtonPicture(const Value: TPicture);
     procedure SetBorderColor(const Value: TColor);
     procedure SetBorderColorHover(const Value: TColor);
     function MouseInControl: Boolean;
@@ -369,10 +363,12 @@ type
     procedure SetTextFont(const Value: TFont);
     procedure SetTip(const Value: string);
     procedure SetTipFont(const Value: TFont);
+    procedure SetButtonWidth(const Value: Integer);
   protected
     procedure Loaded; override;
     procedure DoEnter; override;
     procedure DoExit; override;
+    procedure DrawButton(const Rect: TRect); virtual; abstract;
     procedure CMMouseEnter(var msgr: TMessage); message CM_MOUSEENTER;
     procedure CMMouseLeave(var msgr: TMessage); message CM_MOUSELEAVE;
     procedure CBShowShopDown(var msgr: TMessage); message CB_SHOWDROPDOWN;
@@ -386,10 +382,29 @@ type
     procedure CreateParams(var Params: TCreateParams); override;
     procedure EditWndProc(var msgr: TMessage); override;
     property NumberOnly: Boolean read FNumberOnly write SetNumberOnly;
+    property ButtonWidth: Integer read FButtonWidth write SetButtonWidth default 24;
+    property BorderColor: TColor read FBorderColor write SetBorderColor;
+    property BorderColorHover: TColor read FBorderColorHover write SetBorderColorHover;
+    property ShowTip: Boolean read FShowTip write SetShowTip;
+    property Tip: string read FTip write SetTip;
+    property TipFont: TFont read FTipFont write SetTipFont;
+    property TextFont: TFont read FTextFont write SetTextFont;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     property ShowingTip: Boolean read FShowingTip write SetShowingTip;
+  end;
+
+  TFsCombobox = class(TFsCustomCombobox)
+  private
+    FButtonPicture: TPicture;
+    procedure ButtonPictureChanged(Sender: TObject);
+    procedure SetButtonPicture(const Value: TPicture);
+  protected
+    procedure DrawButton(const Rect: TRect); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   published
     property Align;
     property AutoComplete default True;
@@ -452,14 +467,14 @@ type
     property OnStartDock;
     property OnStartDrag;
     property Items; { Must be published after OnMeasureItem }
-    property Space: Integer read FSpace write SetSpace default 0;
+    property ButtonWidth;
+    property BorderColor;
+    property BorderColorHover;
+    property ShowTip;
+    property Tip;
+    property TipFont;
+    property TextFont;
     property ButtonPicture: TPicture read FButtonPicture write SetButtonPicture;
-    property BorderColor: TColor read FBorderColor write SetBorderColor;
-    property BorderColorHover: TColor read FBorderColorHover write SetBorderColorHover;
-    property ShowTip: Boolean read FShowTip write SetShowTip;
-    property Tip: string read FTip write SetTip;
-    property TipFont: TFont read FTipFont write SetTipFont;
-    property TextFont: TFont read FTextFont write SetTextFont;
   end;
 
   TFsCustomCheckBox = class(TFsGraphicControl)
@@ -591,34 +606,22 @@ begin
   FLayout := blTextInStretchPicture;
 end;
 
-procedure TFsCustomButton.DrawButtonSurface;
-var
-  flags: DWORD;
-begin
-  flags := DFCS_BUTTONPUSH;
-
-  if mfLButtonDown in Self.FMouseFlag then
-    flags := flags or DFCS_PUSHED;
-
-  Windows.DrawFrameControl(Self.Canvas.Handle, Rect(0, 0, Self.Width, Self.Height),
-    DFC_BUTTON, flags);
-end;
-
 procedure TFsCustomButton.DrawImageAndText;
 var
   w: Integer;
 begin
   Self.GetPictureSize(w);
   
-  if w = 0 then Self.DrawButtonSurface;
-
-  case Self.FLayout of
-    blPictureLeft: Self.DrawPictureLeft;
-    blPictureRight: Self.DrawPictureRight;
-    blPictureTop: Self.DrawPictureTop;
-    blPictureBottom: Self.DrawPictureBottom;
-    blTextInPicture: Self.DrawTextInPicture;
-    blTextInStretchPicture: Self.DrawTextInStretchPicture;
+  if w <> 0 then
+  begin
+    case Self.FLayout of
+      blPictureLeft: Self.DrawPictureLeft;
+      blPictureRight: Self.DrawPictureRight;
+      blPictureTop: Self.DrawPictureTop;
+      blPictureBottom: Self.DrawPictureBottom;
+      blTextInPicture: Self.DrawTextInPicture;
+      blTextInStretchPicture: Self.DrawTextInStretchPicture;
+    end;
   end;
 end;
 
@@ -1968,43 +1971,25 @@ begin
     OutputDebugString(PChar(Format('%d, %d, %d, %d', [Left, Top, Right, Bottom])));
 end;
 
-{ TFsCombobox }
+{ TFsCustomCombobox }
 
-procedure TFsCombobox.AdjustEditBoundsRect;
+procedure TFsCustomCombobox.AdjustEditBoundsRect;
 begin
   case Self.Style of
-    csDropDown:
-      begin
-        if FButtonPicture.Width > 0 then
-          MoveWindow(FEditHandle, 1, 1, Self.Width - 2 - FSpace - FButtonPicture.Width, Self.Height - 2, True)
-        else
-          MoveWindow(FEditHandle, 1, 1, Self.Width - 2, Self.Height - 2, True);
-      end;
+    csDropDown: MoveWindow(FEditHandle, 1, 1, Self.Width - 2 - FButtonWidth, Self.Height - 2, True);
     csSimple: MoveWindow(FEditHandle, 1, 1, Self.Width - 2, Self.Height - 2, True);
   end;
 end;
 
-procedure TFsCombobox.ButtonPictureChanged(Sender: TObject);
-begin
-  AdjustEditBoundsRect;
-end;
-
-procedure TFsCombobox.CalcEditBoundsRect(var r: TRect);
+procedure TFsCustomCombobox.CalcEditBoundsRect(var r: TRect);
 begin
   r.Left := 1;
   r.Top := 1;
   case Self.Style of
     csDropDown:
       begin
-        if FButtonPicture.Width > 0 then
-        begin
-          r.Right := r.Left + Self.Width - 2 - FSpace - FButtonPicture.Width;
-          r.Bottom := r.Top + Self.Height - 2;
-        end
-        else begin
-          r.Right := r.Left + Self.Width - 2;
-          r.Bottom := r.Top + Self.Height - 2;
-        end
+        r.Right := r.Left + Self.Width - 2 - FButtonWidth;
+        r.Bottom := r.Top + Self.Height - 2;
       end;
     csSimple:
       begin
@@ -2014,37 +1999,36 @@ begin
   end;
 end;
 
-procedure TFsCombobox.CBShowShopDown(var msgr: TMessage);
+procedure TFsCustomCombobox.CBShowShopDown(var msgr: TMessage);
 begin
   inherited;
   AdjustEditBoundsRect;
 end;
 
-procedure TFsCombobox.CheckInvalidate;
+procedure TFsCustomCombobox.CheckInvalidate;
 begin
   if (FMouseInControlLastPaint <> MouseInControl) and Visible then
     Self.Paint;
 end;
 
-procedure TFsCombobox.CMMouseEnter(var msgr: TMessage);
+procedure TFsCustomCombobox.CMMouseEnter(var msgr: TMessage);
 begin
   inherited;
   CheckInvalidate;
 end;
 
-procedure TFsCombobox.CMMouseLeave(var msgr: TMessage);
+procedure TFsCustomCombobox.CMMouseLeave(var msgr: TMessage);
 begin
   inherited;
   CheckInvalidate;
 end;
 
-constructor TFsCombobox.Create(AOwner: TComponent);
+constructor TFsCustomCombobox.Create(AOwner: TComponent);
 begin
   inherited;
+  FButtonWidth := 24;
   FBorderColorHover := RGB(123, 228, 255);
   FBorderColor := RGB(78, 160, 209);
-  FButtonPicture := TPicture.Create;
-  FButtonPicture.OnChange := Self.ButtonPictureChanged;
   FTipFont := TFont.Create;
   FTipFont.Color := clGrayText;
   FTipFont.OnChange := Self.TipFontChanged;
@@ -2055,7 +2039,7 @@ begin
   TControlCanvas(FCanvas).Control := Self;
 end;
 
-procedure TFsCombobox.CreateParams(var Params: TCreateParams);
+procedure TFsCustomCombobox.CreateParams(var Params: TCreateParams);
 begin
   inherited;
 
@@ -2063,46 +2047,33 @@ begin
   else Params.Style := Params.Style and not ES_NUMBER;
 end;
 
-procedure TFsCombobox.CreateWnd;
+procedure TFsCustomCombobox.CreateWnd;
 begin
   inherited;
   AdjustEditBoundsRect;
 end;
 
-destructor TFsCombobox.Destroy;
+destructor TFsCustomCombobox.Destroy;
 begin
-  FButtonPicture.Free;
   FCanvas.Free;
   FTipFont.Free;
   FTextFont.Free;
   inherited;
 end;
 
-procedure TFsCombobox.DoEnter;
+procedure TFsCustomCombobox.DoEnter;
 begin
   ShowingTip := False;
   inherited;
 end;
 
-procedure TFsCombobox.DoExit;
+procedure TFsCustomCombobox.DoExit;
 begin
   if Text = '' then ShowingTip := True;
   inherited;
 end;
 
-procedure TFsCombobox.DrawButton;
-var
-  X, Y: Integer;
-begin
-  if FButtonPicture.Width > 0 then
-  begin
-    X := Self.Width - 1 - FButtonPicture.Width - FSpace div 2;
-    Y := (Self.Height - FButtonPicture.Height) div 2;
-    FCanvas.Draw(X, Y, FButtonPicture.Graphic);
-  end;
-end;
-
-procedure TFsCombobox.EditWndProc(var msgr: TMessage);
+procedure TFsCustomCombobox.EditWndProc(var msgr: TMessage);
 var
   tme: TTrackMouseEvent;
   pwp: PWindowPos;
@@ -2143,7 +2114,7 @@ begin
   if not handled then inherited;
 end;
 
-procedure TFsCombobox.Loaded;
+procedure TFsCustomCombobox.Loaded;
 begin
   inherited;
   if not (csDesigning in ComponentState) then
@@ -2152,7 +2123,7 @@ begin
   end;
 end;
 
-function TFsCombobox.MouseInControl: Boolean;
+function TFsCustomCombobox.MouseInControl: Boolean;
 var
   pt: TPoint;
   rw: TRect;
@@ -2163,7 +2134,7 @@ begin
   Result := PtInRect(rw, pt);  
 end;
 
-procedure TFsCombobox.Paint;
+procedure TFsCustomCombobox.Paint;
 var
   bgc: TColor;
   r: TRect;
@@ -2196,22 +2167,23 @@ begin
     FCanvas.Brush.Color := bgc;
     FCanvas.Brush.Style := bsSolid;
     FCanvas.FrameRect(r);
-
-    if FButtonPicture.Width > 0 then
-    begin
-      r.Right := Self.Width - 1;
-      r.Left := r.Right - FButtonPicture.Width - FSpace;
-      r.Top := 1;
-      r.Bottom := Self.Height - 1;
-      FCanvas.Brush.Color := Self.Color;
-      FCanvas.FillRect(r);
-    end;
+    r.Right := Self.Width - 1;
+    r.Left := r.Right - FButtonWidth ;
+    r.Top := 1;
+    r.Bottom := Self.Height - 1;
+    FCanvas.Brush.Color := Self.Color;
+    FCanvas.FillRect(r);
   end;
 
-  Self.DrawButton;
+  r.Right := Self.Width - 1;
+  r.Left := r.Right - FButtonWidth;
+  r.Top := 1;
+  r.Bottom := Self.ClientHeight - 1;
+
+  Self.DrawButton(r);
 end;
 
-procedure TFsCombobox.SetBorderColor(const Value: TColor);
+procedure TFsCustomCombobox.SetBorderColor(const Value: TColor);
 begin
   if FBorderColor <> Value then
   begin
@@ -2220,7 +2192,7 @@ begin
   end;
 end;
 
-procedure TFsCombobox.SetBorderColorHover(const Value: TColor);
+procedure TFsCustomCombobox.SetBorderColorHover(const Value: TColor);
 begin
   if FBorderColorHover <> Value then
   begin
@@ -2229,12 +2201,16 @@ begin
   end;
 end;
 
-procedure TFsCombobox.SetButtonPicture(const Value: TPicture);
+procedure TFsCustomCombobox.SetButtonWidth(const Value: Integer);
 begin
-  FButtonPicture.Assign(Value);
+  if (FButtonWidth <> Value) and (Value > 0) then
+  begin
+    FButtonWidth := Value;
+    AdjustEditBoundsRect;
+  end;
 end;
 
-procedure TFsCombobox.SetNumberOnly(const Value: Boolean);
+procedure TFsCustomCombobox.SetNumberOnly(const Value: Boolean);
 var
   style: DWORD;
 begin
@@ -2251,7 +2227,7 @@ begin
   end;
 end;
 
-procedure TFsCombobox.SetShowingTip(const Value: Boolean);
+procedure TFsCustomCombobox.SetShowingTip(const Value: Boolean);
 begin
   if FShowTip then
   begin
@@ -2272,7 +2248,7 @@ begin
   end;
 end;
 
-procedure TFsCombobox.SetShowTip(const Value: Boolean);
+procedure TFsCustomCombobox.SetShowTip(const Value: Boolean);
 begin
   if FShowTip <> Value then
   begin
@@ -2289,63 +2265,54 @@ begin
   end;
 end;
 
-procedure TFsCombobox.SetSpace(const Value: Integer);
-begin
-  if (FSpace <> Value) and (Value >= 0) then
-  begin
-    FSpace := Value;
-    AdjustEditBoundsRect;
-  end;
-end;
-
-procedure TFsCombobox.SetTextFont(const Value: TFont);
+procedure TFsCustomCombobox.SetTextFont(const Value: TFont);
 begin
   FTextFont.Assign(Value);
 end;
 
-procedure TFsCombobox.SetTip(const Value: string);
+procedure TFsCustomCombobox.SetTip(const Value: string);
 begin
   FTip := Value;
   if FShowingTip then Self.Text := FTip;
 end;
 
-procedure TFsCombobox.SetTipFont(const Value: TFont);
+procedure TFsCustomCombobox.SetTipFont(const Value: TFont);
 begin
   FTipFont.Assign(Value);
 end;
 
-procedure TFsCombobox.TextFontChanged(Sender: TObject);
+procedure TFsCustomCombobox.TextFontChanged(Sender: TObject);
 begin
   if not FShowingTip then Font.Assign(FTextFont);  
 end;
 
-procedure TFsCombobox.TipFontChanged(Sender: TObject);
+procedure TFsCustomCombobox.TipFontChanged(Sender: TObject);
 begin
   if FShowingTip then Font.Assign(FTipFont);
 end;
 
-procedure TFsCombobox.WMLButtonDblClk(var msgr: TWMLButtonDblClk);
+procedure TFsCustomCombobox.WMLButtonDblClk(var msgr: TWMLButtonDblClk);
 begin
   msgr.Result := 0;  
 end;
 
-procedure TFsCombobox.WMLButtonDown(var msgr: TWMNCLButtonDown);
+procedure TFsCustomCombobox.WMLButtonDown(var msgr: TWMNCLButtonDown);
 begin
   SendMessage(Handle, CB_SHOWDROPDOWN, Longint(not Self.DroppedDown), 0);
   msgr.Result := 0;
 end;
 
-procedure TFsCombobox.WMLButtonUp(var msgr: TWMNCLButtonUp);
+procedure TFsCustomCombobox.WMLButtonUp(var msgr: TWMNCLButtonUp);
 begin
   msgr.Result := 0;
 end;
 
-procedure TFsCombobox.WMNCCalcSize(var msgr: TWMNCCalcSize);
+procedure TFsCustomCombobox.WMNCCalcSize(var msgr: TWMNCCalcSize);
 begin
   msgr.Result := 0;
 end;
 
-procedure TFsCombobox.WMPaint(var msgr: TWMPaint);
+procedure TFsCustomCombobox.WMPaint(var msgr: TWMPaint);
 var
   ps: TPaintStruct;
   dc: HDC;
@@ -2369,10 +2336,47 @@ begin
   end;
 end;
 
-procedure TFsCombobox.WMSize(var msgr: TWMSize);
+procedure TFsCustomCombobox.WMSize(var msgr: TWMSize);
 begin
   inherited;
   AdjustEditBoundsRect;
+end;
+
+{ TFsCombobox }
+
+procedure TFsCombobox.ButtonPictureChanged(Sender: TObject);
+begin
+  Self.Invalidate;
+end;
+
+constructor TFsCombobox.Create(AOwner: TComponent);
+begin
+  inherited;
+  FButtonPicture := TPicture.Create;
+  FButtonPicture.OnChange := Self.ButtonPictureChanged;
+end;
+
+destructor TFsCombobox.Destroy;
+begin
+  FButtonPicture.Free;
+  inherited;
+end;
+
+procedure TFsCombobox.DrawButton(const Rect: TRect);
+var
+  x, y: Integer;
+begin
+  if FButtonPicture.Width > 0 then
+  begin
+    x := Rect.Left + (Rect.Right - Rect.Left - FButtonPicture.Width) div 2;
+    y := Rect.Top + (Rect.Bottom - Rect.Top - FButtonPicture.Height) div 2;
+    Canvas.Draw(x, y, FButtonPicture.Graphic);
+  end;
+end;
+
+procedure TFsCombobox.SetButtonPicture(const Value: TPicture);
+begin
+  FButtonPicture.Assign(Value);
 end;
 
 end.

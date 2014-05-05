@@ -675,7 +675,8 @@ end;
 
 procedure TFsGraphicControl.DrawBackground;
 begin
-
+  if Assigned(FBackground) and not FBackground.Empty then
+    FBackground.Draw(Canvas, ClientRect);
 end;
 
 procedure TFsGraphicControl.WMPaint(var msgr: TWMPaint);
