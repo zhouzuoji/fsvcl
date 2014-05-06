@@ -2003,6 +2003,7 @@ procedure TFsCustomCombobox.CBShowShopDown(var msgr: TMessage);
 begin
   inherited;
   AdjustEditBoundsRect;
+  Self.Invalidate;
 end;
 
 procedure TFsCustomCombobox.CheckInvalidate;
