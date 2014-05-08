@@ -114,6 +114,7 @@ type
     destructor Destroy; override;
   published
     property AllowDown;
+    property Background;
     property Down;
     property Group;
     property Picture: TPicture read GetPicture write SetPicture;
@@ -143,6 +144,7 @@ type
     destructor Destroy; override;
   published
     property AllowDown;
+    property Background;
     property Down;
     property Group;
     property Picture: TPicture read FPicture write SetPicture;
