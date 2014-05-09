@@ -3,7 +3,7 @@ unit FSNavTree;
 interface
 
 uses
-  SysUtils, Classes, Windows, Messages, Graphics, Controls, FSVclBase, FSControls;
+  SysUtils, Classes, Windows, Messages, Graphics, Controls, FSVclBase, FSGraphics, FSControls;
 
 type
   TFsNavTree = class;
@@ -13,11 +13,11 @@ type
   private
     FText: string;
     FNodes: TFsNavTreeNodes;
-    FImage: TPicture;
+    FImage: TFsPicture;
     FHeight: Integer;
     procedure SetText(const Value: string);
     procedure SetNodes(const Value: TFsNavTreeNodes);
-    procedure SetImage(const Value: TPicture);
+    procedure SetImage(const Value: TFsPicture);
     procedure SetHeight(const Value: Integer);
   protected
     procedure ImageChanged(Sender: TObject);
@@ -29,7 +29,7 @@ type
   published
     property Text: string read FText write SetText;
     property Nodes: TFsNavTreeNodes read FNodes write SetNodes;
-    property Image: TPicture read FImage write SetImage;
+    property Image: TFsPicture read FImage write SetImage;
     property Height: Integer read FHeight write SetHeight;
   end;
 
@@ -116,15 +116,15 @@ type
     FCatalogImageOffset: Integer;
     FCatalogTextOffset: Integer;
     FCatalogFont: TFont;
-    FLeafImage: TPicture;
-    FCollapsedImage: TPicture;
-    FExpandedImage: TPicture;
+    FLeafImage: TFsPicture;
+    FCollapsedImage: TFsPicture;
+    FExpandedImage: TFsPicture;
     FNodeIndent: Integer;
     FNodeTextOffset: Integer;
     FOnClickNode: TNodeClickEvent;
     FHighlightColor: TColor;
     FHighlightNode: TFsNavTreeNode;
-    function GetNodePictrue(node: TFsNavTreeNode): TPicture;
+    function GetNodePictrue(node: TFsNavTreeNode): TFsPicture;
     function GetNodeImageRect(node: TFsNavTreeNode; const r: TRect): TRect;
     function GetCatalogImageRect(catalog: TFsNavTreeCatalog; const r: TRect): TRect;
     procedure SetCatalogs(const Value: TFsNavTreeCatalogs);
@@ -137,9 +137,9 @@ type
     procedure SetCatalogImageOffset(const Value: Integer);
     procedure SetCatalogTextOffset(const Value: Integer);
     procedure SetCatalogFont(const Value: TFont);
-    procedure SetCollapsedImage(const Value: TPicture);
-    procedure SetExpandedImage(const Value: TPicture);
-    procedure SetLeafImage(const Value: TPicture);
+    procedure SetCollapsedImage(const Value: TFsPicture);
+    procedure SetExpandedImage(const Value: TFsPicture);
+    procedure SetLeafImage(const Value: TFsPicture);
     procedure SetNodeIndent(const Value: Integer);
     procedure SetNodeTextOffset(const Value: Integer);
     procedure SetHighlightColor(const Value: TColor);
@@ -170,9 +170,9 @@ type
     property ScrollBars;
     property Font;
     property HighlightColor: TColor read FHighlightColor write SetHighlightColor;
-    property CollapsedImage: TPicture read FCollapsedImage write SetCollapsedImage;
-    property ExpandedImage: TPicture read FExpandedImage write SetExpandedImage;
-    property LeafImage: TPicture read FLeafImage write SetLeafImage;
+    property CollapsedImage: TFsPicture read FCollapsedImage write SetCollapsedImage;
+    property ExpandedImage: TFsPicture read FExpandedImage write SetExpandedImage;
+    property LeafImage: TFsPicture read FLeafImage write SetLeafImage;
     property NodeIndent: Integer read FNodeIndent write SetNodeIndent;
     property Catalogs: TFsNavTreeCatalogs read FCatalogs write SetCatalogs;
     property CatalogFont: TFont read FCatalogFont write SetCatalogFont;
@@ -198,9 +198,9 @@ begin
   FNodeIndent := 4;
   FHighlightColor := RGB(141, 203, 241);
   FCatalogFont := TFont.Create;
-  FCollapsedImage := TPicture.Create;
-  FExpandedImage := TPicture.Create;
-  FLeafImage := TPicture.Create;
+  FCollapsedImage := TFsPicture.Create;
+  FExpandedImage := TFsPicture.Create;
+  FLeafImage := TFsPicture.Create;
   FCatalogs := TFsNavTreeCatalogs.Create(Self);
 end;
 
@@ -247,9 +247,9 @@ begin
     r.Right := DrawInfo.ClientRect.Right;
     r.Bottom := DrawInfo.ClientRect.Top + DrawInfo.CurrentOffsetY - DrawInfo.OffsetY;
 
-    if Assigned(catalog.Image.Graphic) then
+    if catalog.Image.Width > 0 then
     begin
-      Canvas.Draw(r.Left, r.Top + (catalog.Height - catalog.Image.Height) div 2, catalog.Image.Graphic);
+      Canvas.Draw(r.Left, r.Top + (catalog.Height - catalog.Image.Height) div 2, catalog.Image.Picture.Graphic);
       Inc(r.Left, FCatalogTextOffset + catalog.Image.Width);
     end;
 
@@ -275,7 +275,7 @@ function TFsNavTree.DrawNode(node: TFsNavTreeNode; var DrawInfo: TFsNavTreeDrawI
 var
   r: TRect;
   i: Integer;
-  graph: TGraphic;
+  graph: TFsPicture;
 begin
   r.Top := DrawInfo.ClientRect.Top + DrawInfo.CurrentOffsetY - DrawInfo.OffsetY;
   
@@ -295,13 +295,13 @@ begin
       Canvas.FillRect(Rect(DrawInfo.ClientRect.Left, r.Top, DrawInfo.ClientRect.Right, r.Bottom));
     end;
 
-    if node.ChildNodes.Count = 0 then graph := FLeafImage.Graphic
-    else if node.Expanded then graph := FExpandedImage.Graphic
-    else graph := FCollapsedImage.Graphic;
+    if node.ChildNodes.Count = 0 then graph := FLeafImage
+    else if node.Expanded then graph := FExpandedImage
+    else graph := FCollapsedImage;
     
-    if Assigned(graph) and not graph.Empty then
+    if graph.Width > 0 then
     begin
-      Canvas.Draw(r.Left, r.Top + (node.Height - graph.Height) div 2, graph);
+      graph.Draw(Self.Canvas, r.Left, r.Top + (node.Height - graph.Height) div 2);
       Inc(r.Left, FNodeTextOffset + graph.Width);
     end;
 
@@ -348,7 +348,7 @@ end;
 
 function TFsNavTree.GetNodeImageRect(node: TFsNavTreeNode; const r: TRect): TRect;
 var
-  pic: TPicture;
+  pic: TFsPicture;
 begin
   pic := GetNodePictrue(node);
   Result.Top :=  r.Top + (node.Height - pic.Height) div 2;
@@ -357,7 +357,7 @@ begin
   Result.Right := Result.Left + pic.Width;
 end;
 
-function TFsNavTree.GetNodePictrue(node: TFsNavTreeNode): TPicture;
+function TFsNavTree.GetNodePictrue(node: TFsNavTreeNode): TFsPicture;
 begin
   if node.ChildNodes.Count = 0 then Result := FLeafImage
   else if node.Expanded then Result := FExpandedImage
@@ -562,13 +562,13 @@ begin
   end;
 end;
 
-procedure TFsNavTree.SetCollapsedImage(const Value: TPicture);
+procedure TFsNavTree.SetCollapsedImage(const Value: TFsPicture);
 begin
   FCollapsedImage.Assign(Value);
   Self.Invalidate;
 end;
 
-procedure TFsNavTree.SetExpandedImage(const Value: TPicture);
+procedure TFsNavTree.SetExpandedImage(const Value: TFsPicture);
 begin
   FExpandedImage.Assign(Value);
   Self.Invalidate;
@@ -583,7 +583,7 @@ begin
   end;
 end;
 
-procedure TFsNavTree.SetLeafImage(const Value: TPicture);
+procedure TFsNavTree.SetLeafImage(const Value: TFsPicture);
 begin
   FLeafImage.Assign(Value);
   Self.Invalidate;
@@ -762,7 +762,7 @@ constructor TFsNavTreeCatalog.Create(Collection: TCollection);
 begin
   inherited;
   FHeight := 32;
-  FImage := TPicture.Create;
+  FImage := TFsPicture.Create;
   FImage.OnChange := Self.ImageChanged;
   FNodes := TFsNavTreeNodes.Create(Self);
 end;
@@ -793,7 +793,7 @@ begin
   end;
 end;
 
-procedure TFsNavTreeCatalog.SetImage(const Value: TPicture);
+procedure TFsNavTreeCatalog.SetImage(const Value: TFsPicture);
 begin
   FImage.Assign(Value);
 end;

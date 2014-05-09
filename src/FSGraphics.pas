@@ -89,12 +89,46 @@ type
     procedure DrawFrame(DC: HDC; const Rect: TRect; Index: Integer); virtual; abstract;
   end;
 
+  TFsPicture = class(TPersistent)
+  private
+    FOnChange: TNotifyEvent;
+    FPicture: TPicture;
+    FTransparent: Boolean;
+    FTransparentColor: TColor;
+    procedure DoChange;
+    procedure PictureChanged(Sender: TObject);
+    procedure UpdatePicture;
+    procedure SetPicture(const Value: TPicture);
+    procedure SetTransparent(const Value: Boolean);
+    procedure SetTransparentColor(const Value: TColor);
+    function GetHeight: Integer;
+    function GetWidth: Integer;
+  protected
+    procedure AssignTo(Dest: TPersistent); override;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure Assign(Source: TPersistent); override;
+    procedure Draw(ACanvas: TCanvas; const Rect: TRect); overload;
+    procedure Draw(ACanvas: TCanvas; X, Y: Integer); overload;
+    property Width: Integer read GetWidth;
+    property Height: Integer read GetHeight;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
+  published
+    property Picture: TPicture read FPicture write SetPicture;
+    property TransparentColor: TColor read FTransparentColor write SetTransparentColor;
+    property Transparent: Boolean read FTransparent write SetTransparent default False;
+  end;
+
   TFsPictureDrawable = class(TFsDrawable)
   private
     FPicture: TPicture;
+    FTransparent: Boolean;
     procedure PictureChanged(Sender: TObject);
     procedure SetPicture(const Value: TPicture);
+    procedure SetTransparent(const Value: Boolean);
   protected
+    procedure AssignTo(Dest: TPersistent); override;
     function GetHeight: Integer; override;
     function GetWidth: Integer; override;
     function GetEmpty: Boolean; override;
@@ -104,6 +138,7 @@ type
     procedure Draw(ACanvas: TCanvas; const Rect: TRect); override;
   published
     property Picture: TPicture read FPicture write SetPicture;
+    property Transparent: Boolean read FTransparent write SetTransparent;
   end;
 
   TFsNinePitchDrawable = class(TFsMultiFrameDrawable)
@@ -672,7 +707,147 @@ begin
   Result := False;
 end;
 
+{ TFsPicture }
+
+procedure TFsPicture.Assign(Source: TPersistent);
+begin
+  if (Source = nil) or (Source is TGraphic) then
+    FPicture.Graphic := TGraphic(Source)
+  else
+    inherited;
+end;
+
+procedure TFsPicture.AssignTo(Dest: TPersistent);
+begin
+  UpdatePicture;
+  
+  if Dest is TPicture then TPicture(Dest).Assign(FPicture)
+  else if Dest is TFsPicture then
+  begin
+    TFsPicture(Dest).FTransparent := Self.FTransparent;
+    TFsPicture(Dest).FTransparentColor := Self.FTransparentColor;
+    TFsPicture(Dest).Picture.Assign(Self.FPicture);
+  end
+  else inherited;
+end;
+
+constructor TFsPicture.Create;
+begin
+  inherited;
+  FPicture := TPicture.Create;
+  FPicture.OnChange := Self.PictureChanged;
+  FTransparentColor := clPurple;
+  FTransparent := False;
+end;
+
+destructor TFsPicture.Destroy;
+begin
+  FPicture.Free;
+  inherited;
+end;
+
+procedure TFsPicture.DoChange;
+begin
+  if Assigned(FOnChange) then FOnChange(Self);
+end;
+
+procedure TFsPicture.Draw(ACanvas: TCanvas; X, Y: Integer);
+begin
+  if Assigned(FPicture.Graphic) then
+    ACanvas.Draw(X, Y, FPicture.Graphic);
+end;
+
+procedure TFsPicture.Draw(ACanvas: TCanvas; const Rect: TRect);
+begin
+  inherited;
+
+  if Assigned(FPicture.Graphic) then
+  begin
+    UpdatePicture;
+    ACanvas.StretchDraw(Rect, FPicture.Graphic);
+  end;
+end;
+
+function TFsPicture.GetHeight: Integer;
+begin
+  Result := FPicture.Height;
+end;
+
+function TFsPicture.GetWidth: Integer;
+begin
+  Result := FPicture.Width;
+end;
+
+procedure TFsPicture.PictureChanged(Sender: TObject);
+begin
+  if Assigned(FPicture.Graphic) then
+  begin
+    FTransparent := FPicture.Graphic.Transparent;
+
+    if FPicture.Graphic is TBitmap then
+      FTransparentColor := TBitmap(FPicture.Graphic).TransparentColor;
+  end;
+
+  DoChange;
+end;
+
+procedure TFsPicture.SetPicture(const Value: TPicture);
+begin
+  if FPicture <> Value then
+    FPicture.Assign(Value);
+end;
+
+procedure TFsPicture.SetTransparent(const Value: Boolean);
+begin
+  if FTransparent <> Value then
+  begin
+    FTransparent := Value;
+
+    if Assigned(FPicture) and Assigned(FPicture.Graphic) then
+    begin
+      FPicture.Graphic.Transparent := FTransparent;
+      DoChange;
+    end;
+  end;
+end;
+
+procedure TFsPicture.SetTransparentColor(const Value: TColor);
+begin
+  if FTransparentColor <> Value then
+  begin
+    FTransparentColor := Value;
+
+    if Assigned(FPicture) and Assigned(FPicture.Graphic) and (FPicture.Graphic is TBitmap) then
+    begin
+      TBitmap(FPicture.Graphic).TransparentColor := FTransparentColor;
+      DoChange;
+    end;
+  end;
+end;
+
+procedure TFsPicture.UpdatePicture;
+begin
+  if Assigned(FPicture.Graphic) then
+  begin
+    FPicture.Graphic.Transparent := FTransparent;
+
+    if FPicture.Graphic is TBitmap then
+      TBitmap(FPicture.Graphic).TransparentColor := FTransparentColor;
+  end; 
+end;
+
 { TFsPictureDrawable }
+
+procedure TFsPictureDrawable.AssignTo(Dest: TPersistent);
+begin
+  if Dest is TPicture then TPicture(Dest).Assign(FPicture)
+  else if Dest is TFsPictureDrawable then
+  begin
+    TFsPictureDrawable(Dest).FTransparent := Self.FTransparent;
+    TFsPictureDrawable(Dest).Picture.Assign(Self.FPicture);
+  end
+  else inherited;
+end;
 
 constructor TFsPictureDrawable.Create(Owner: TComponent);
 begin
@@ -692,7 +867,10 @@ begin
   inherited;
 
   if Assigned(FPicture.Graphic) then
+  begin
+    FPicture.Graphic.Transparent := FTransparent;
     ACanvas.StretchDraw(Rect, FPicture.Graphic);
+  end;
 end;
 
 function TFsPictureDrawable.GetEmpty: Boolean;
@@ -719,6 +897,17 @@ procedure TFsPictureDrawable.SetPicture(const Value: TPicture);
 begin
   if FPicture <> Value then
     FPicture.Assign(Value);
+end;
+
+procedure TFsPictureDrawable.SetTransparent(const Value: Boolean);
+begin
+  if FTransparent <> Value then
+  begin
+    FTransparent := Value;
+
+    if Assigned(FPicture) and Assigned(FPicture.Graphic) then
+      FPicture.Graphic.Transparent := FTransparent;
+  end;
 end;
 
 { TFsRectangle }

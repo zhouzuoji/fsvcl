@@ -92,20 +92,16 @@ type
 
   TFsImageButton = class(TFsCustomButton)
   private
-    FPicture: TFsPictureDrawable;
-    FDisablePicture: TFsPictureDrawable;
-    FMouseOverPicture: TFsPictureDrawable;
-    FMouseDownPicture: TFsPictureDrawable;
+    FPicture: TFsPicture;
+    FDisablePicture: TFsPicture;
+    FMouseOverPicture: TFsPicture;
+    FMouseDownPicture: TFsPicture;
     procedure PictureChanged(Sender: TObject);
-    procedure SetPicture(const Value: TPicture);
-    procedure SetMouseDownPicture(const Value: TPicture);
-    procedure SetMouseOverPicture(const Value: TPicture);
-    procedure SetDisablePicture(const Value: TPicture);
-    function GetDisablePicture: TPicture;
-    function GetMouseDownPicture: TPicture;
-    function GetMouseOverPicture: TPicture;
-    function GetPicture: TPicture;
-    function GetDrawable: TFsDrawable;
+    procedure SetPicture(const Value: TFsPicture);
+    procedure SetMouseDownPicture(const Value: TFsPicture);
+    procedure SetMouseOverPicture(const Value: TFsPicture);
+    procedure SetDisablePicture(const Value: TFsPicture);
+    function GetDrawable: TFsPicture;
   protected
     function GetPictureSize(out width: Integer): Integer; override;
     procedure DrawPicture(const Rect: TRect); override;
@@ -117,18 +113,18 @@ type
     property Background;
     property Down;
     property Group;
-    property Picture: TPicture read GetPicture write SetPicture;
-    property DisablePicture: TPicture read GetDisablePicture write SetDisablePicture;
-    property MouseOverPicture: TPicture read GetMouseOverPicture write SetMouseOverPicture;
-    property MouseDownPicture: TPicture read GetMouseDownPicture write SetMouseDownPicture;
+    property Picture: TFsPicture read FPicture write SetPicture;
+    property DisablePicture: TFsPicture read FDisablePicture write SetDisablePicture;
+    property MouseOverPicture: TFsPicture read FMouseOverPicture write SetMouseOverPicture;
+    property MouseDownPicture: TFsPicture read FMouseDownPicture write SetMouseDownPicture;
   end;
 
   TFsCoverButton = class(TFsCustomButton)
   private
-    FPicture: TPicture;
+    FPicture: TFsPicture;
     FHoverCover: TFsDrawable;
     FDownCover: TFsDrawable;
-    procedure SetPicture(const Value: TPicture);
+    procedure SetPicture(const Value: TFsPicture);
     procedure SetDownCover(const Value: TFsDrawable);
     procedure SetHoverCover(const Value: TFsDrawable);
     function GetCover: TFsDrawable;
@@ -147,7 +143,7 @@ type
     property Background;
     property Down;
     property Group;
-    property Picture: TPicture read FPicture write SetPicture;
+    property Picture: TFsPicture read FPicture write SetPicture;
     property HoverCover: TFsDrawable read FHoverCover write SetHoverCover;
     property DownCover: TFsDrawable read FDownCover write SetDownCover;
   end;
@@ -399,9 +395,9 @@ type
 
   TFsCombobox = class(TFsCustomCombobox)
   private
-    FButtonPicture: TPicture;
+    FButtonPicture: TFsPicture;
     procedure ButtonPictureChanged(Sender: TObject);
-    procedure SetButtonPicture(const Value: TPicture);
+    procedure SetButtonPicture(const Value: TFsPicture);
   protected
     procedure DrawButton(const Rect: TRect); override;
   public
@@ -476,7 +472,7 @@ type
     property Tip;
     property TipFont;
     property TextFont;
-    property ButtonPicture: TPicture read FButtonPicture write SetButtonPicture;
+    property ButtonPicture: TFsPicture read FButtonPicture write SetButtonPicture;
   end;
 
   TFsCustomCheckBox = class(TFsGraphicControl)
@@ -513,12 +509,10 @@ type
 
   TFsCheckBox = class(TFsCustomCheckBox)
   private
-    FCheckedPicture: TFsPictureDrawable;
-    FUnCheckedPicture: TFsPictureDrawable;
-    procedure SetCheckedPicture(const Value: TPicture);
-    procedure SetUnCheckedPicture(const Value: TPicture);
-    function GetCheckedPicture: TPicture;
-    function GetUnCheckedPicture: TPicture;
+    FCheckedPicture: TFsPicture;
+    FUnCheckedPicture: TFsPicture;
+    procedure SetCheckedPicture(const Value: TFsPicture);
+    procedure SetUnCheckedPicture(const Value: TFsPicture);
     procedure PictureChanged(Sender: TObject);
   protected
     procedure GetImageSize(out w, h: Integer); override;
@@ -527,8 +521,8 @@ type
     constructor Create(Owner: TComponent); override;
     destructor Destroy; override;
   published
-    property CheckedPicture: TPicture read GetCheckedPicture write SetCheckedPicture;
-    property UnCheckedPicture: TPicture read GetUnCheckedPicture write SetUnCheckedPicture;
+    property CheckedPicture: TFsPicture read FCheckedPicture write SetCheckedPicture;
+    property UnCheckedPicture: TFsPicture read FUnCheckedPicture write SetUnCheckedPicture;
   end;
 
 implementation
@@ -1068,41 +1062,37 @@ end;
 constructor TFsImageButton.Create(Owner: TComponent);
 begin
   inherited;
-  FPicture := TFsPictureDrawable.Create(Self);
-  FDisablePicture := TFsPictureDrawable.Create(Self);
-  FMouseOverPicture := TFsPictureDrawable.Create(Self);
-  FMouseDownPicture := TFsPictureDrawable.Create(Self);
-  FPicture.AddOnChangeListener(Self.PictureChanged);
-  FDisablePicture.AddOnChangeListener(Self.PictureChanged);
-  FMouseOverPicture.AddOnChangeListener(Self.PictureChanged);
-  FMouseDownPicture.AddOnChangeListener(Self.PictureChanged);
+  FPicture := TFsPicture.Create;
+  FDisablePicture := TFsPicture.Create;
+  FMouseOverPicture := TFsPicture.Create;
+  FMouseDownPicture := TFsPicture.Create;
+  
+  FPicture.OnChange := Self.PictureChanged;
+  FDisablePicture.OnChange := Self.PictureChanged;
+  FMouseOverPicture.OnChange := Self.PictureChanged;
+  FMouseDownPicture.OnChange := Self.PictureChanged;
 end;
 
 destructor TFsImageButton.Destroy;
 begin
-  FPicture.RemoveOnChangeListener(Self.PictureChanged);
-  FDisablePicture.RemoveOnChangeListener(Self.PictureChanged);
-  FMouseOverPicture.RemoveOnChangeListener(Self.PictureChanged);
-  FMouseDownPicture.RemoveOnChangeListener(Self.PictureChanged);
+  FPicture.Free;
+  FDisablePicture.Free;
+  FMouseOverPicture.Free;
+  FMouseDownPicture.Free;
   inherited;
 end;
 
 procedure TFsImageButton.DrawPicture(const Rect: TRect);
 var
-  drawable: TFsDrawable;
+  drawable: TFsPicture;
 begin
   drawable := Self.GetDrawable;
 
-  if Assigned(drawable) then
+  if Assigned(drawable) and (drawable.Picture.Width > 0) then
     drawable.Draw(Self.Canvas, Rect);
 end;
 
-function TFsImageButton.GetDisablePicture: TPicture;
-begin
-  Result := FDisablePicture.Picture;
-end;
-
-function TFsImageButton.GetDrawable: TFsDrawable;
+function TFsImageButton.GetDrawable: TFsPicture;
 begin
   if not Self.Enabled then Result := FDisablePicture
   else if FAllowDown and FDown then Result := FMouseDownPicture       
@@ -1110,40 +1100,17 @@ begin
   else if mfMouseOver in FMouseFlag then Result := FMouseOverPicture
   else Result := FPicture;
 
-  if Result.Empty then
-    Result := FPicture;
-end;
-
-function TFsImageButton.GetMouseDownPicture: TPicture;
-begin
-  Result := FMouseDownPicture.Picture;
-end;
-
-function TFsImageButton.GetMouseOverPicture: TPicture;
-begin
-  Result := FMouseOverPicture.Picture;
-end;
-
-function TFsImageButton.GetPicture: TPicture;
-begin
-  Result := FPicture.Picture;
+  if Result.Picture.Width = 0 then Result := FPicture;
 end;
 
 function TFsImageButton.GetPictureSize(out width: Integer): Integer;
 var
-  drawable: TFsDrawable;
+  drawable: TFsPicture;
 begin
   drawable := Self.GetDrawable;
 
-  if Assigned(drawable) and not drawable.Empty then
-  begin
-    width := drawable.Width;
-    Result := drawable.Height;
-  end
-  else begin
-    width := 0;
-    Result := 0;
-  end;
+  width := drawable.Picture.Width;
+  Result := drawable.Picture.Height;
 end;
 
 procedure TFsImageButton.PictureChanged(Sender: TObject);
@@ -1151,24 +1118,24 @@ begin
   if Sender = GetDrawable then Self.AutoSizeAndInvalidate;
 end;
 
-procedure TFsImageButton.SetPicture(const Value: TPicture);
+procedure TFsImageButton.SetPicture(const Value: TFsPicture);
 begin
-  FPicture.Picture.Assign(Value);
+  FPicture.Assign(Value);
 end;
 
-procedure TFsImageButton.SetDisablePicture(const Value: TPicture);
+procedure TFsImageButton.SetDisablePicture(const Value: TFsPicture);
 begin
-  FDisablePicture.Picture.Assign(Value);
+  FDisablePicture.Assign(Value);
 end;
 
-procedure TFsImageButton.SetMouseDownPicture(const Value: TPicture);
+procedure TFsImageButton.SetMouseDownPicture(const Value: TFsPicture);
 begin
-  FMouseDownPicture.Picture.Assign(Value);
+  FMouseDownPicture.Assign(Value);
 end;
 
-procedure TFsImageButton.SetMouseOverPicture(const Value: TPicture);
+procedure TFsImageButton.SetMouseOverPicture(const Value: TFsPicture);
 begin
-  FMouseOverPicture.Picture.Assign(Value);
+  FMouseOverPicture.Assign(Value);
 end;
 
 { TFsImage }
@@ -1384,16 +1351,16 @@ end;
 constructor TFsCheckBox.Create(Owner: TComponent);
 begin
   inherited;
-  FCheckedPicture := TFsPictureDrawable.Create(Self);
-  FUnCheckedPicture := TFsPictureDrawable.Create(Self);
-  FCheckedPicture.AddOnChangeListener(Self.PictureChanged);
-  FUnCheckedPicture.AddOnChangeListener(Self.PictureChanged);
+  FCheckedPicture := TFsPicture.Create;
+  FUnCheckedPicture := TFsPicture.Create;
+  FCheckedPicture.OnChange := Self.PictureChanged;
+  FUnCheckedPicture.OnChange := Self.PictureChanged;
 end;
 
 destructor TFsCheckBox.Destroy;
 begin
-  FCheckedPicture.RemoveOnChangeListener(Self.PictureChanged);
-  FUnCheckedPicture.RemoveOnChangeListener(Self.PictureChanged);
+  FCheckedPicture.Free;
+  FUnCheckedPicture.Free;
   inherited;
 end;
 
@@ -1405,27 +1372,17 @@ begin
     FUnCheckedPicture.Draw(Self.Canvas, Rect)
 end;
 
-function TFsCheckBox.GetCheckedPicture: TPicture;
-begin
-  Result := FCheckedPicture.Picture;
-end;
-
 procedure TFsCheckBox.GetImageSize(out w, h: Integer);
 begin
   if Self.Checked then
   begin
-    w := FCheckedPicture.Width;
-    h := FCheckedPicture.Height;
+    w := FCheckedPicture.Picture.Width;
+    h := FCheckedPicture.Picture.Height;
   end
   else begin
-    w := FUnCheckedPicture.Width;
-    h := FUnCheckedPicture.Height;
+    w := FUnCheckedPicture.Picture.Width;
+    h := FUnCheckedPicture.Picture.Height;
   end;
-end;
-
-function TFsCheckBox.GetUnCheckedPicture: TPicture;
-begin
-  Result := FUnCheckedPicture.Picture;
 end;
 
 procedure TFsCheckBox.PictureChanged(Sender: TObject);
@@ -1434,14 +1391,14 @@ begin
     Self.AutoSizeAndInvalidate;
 end;
 
-procedure TFsCheckBox.SetCheckedPicture(const Value: TPicture);
+procedure TFsCheckBox.SetCheckedPicture(const Value: TFsPicture);
 begin
-  FCheckedPicture.Picture.Assign(Value);
+  FCheckedPicture.Assign(Value);
 end;
 
-procedure TFsCheckBox.SetUnCheckedPicture(const Value: TPicture);
+procedure TFsCheckBox.SetUnCheckedPicture(const Value: TFsPicture);
 begin
-  FUnCheckedPicture.Picture.Assign(Value);
+  FUnCheckedPicture.Assign(Value);
 end;
 
 { TFsCoverButton }
@@ -1449,7 +1406,7 @@ end;
 constructor TFsCoverButton.Create(AOwner: TComponent);
 begin
   inherited;
-  FPicture := TPicture.Create;
+  FPicture := TFsPicture.Create;
   FPicture.OnChange := Self.PictureChanged;
 end;
 
@@ -1463,8 +1420,8 @@ end;
 
 procedure TFsCoverButton.DrawPicture(const Rect: TRect);
 begin
-  if Assigned(FPicture.Graphic) and not FPicture.Graphic.Empty then
-    Self.Canvas.StretchDraw(Rect, FPicture.Graphic);
+  if FPicture.Picture.Width > 0 then
+    FPicture.Draw(Self.Canvas, Rect);
 end;
 
 function TFsCoverButton.GetCover: TFsDrawable;
@@ -1479,15 +1436,8 @@ end;
 
 function TFsCoverButton.GetPictureSize(out width: Integer): Integer;
 begin
-  if Assigned(FPicture.Graphic) and not FPicture.Graphic.Empty then
-  begin
-    width := FPicture.Graphic.Width;
-    Result := FPicture.Graphic.Height;
-  end
-  else begin
-    width := 0;
-    Result := 0;
-  end;
+  width := FPicture.Picture.Width;
+  Result := FPicture.Picture.Height;
 end;
 
 procedure TFsCoverButton.LinkedPictureChanged(Sender: TObject);
@@ -1601,7 +1551,7 @@ begin
   end;
 end;
 
-procedure TFsCoverButton.SetPicture(const Value: TPicture);
+procedure TFsCoverButton.SetPicture(const Value: TFsPicture);
 begin
   FPicture.Assign(Value);
 end;
@@ -2355,7 +2305,7 @@ end;
 constructor TFsCombobox.Create(AOwner: TComponent);
 begin
   inherited;
-  FButtonPicture := TPicture.Create;
+  FButtonPicture := TFsPicture.Create;
   FButtonPicture.OnChange := Self.ButtonPictureChanged;
 end;
 
@@ -2369,15 +2319,15 @@ procedure TFsCombobox.DrawButton(const Rect: TRect);
 var
   x, y: Integer;
 begin
-  if FButtonPicture.Width > 0 then
+  if FButtonPicture.Picture.Width > 0 then
   begin
-    x := Rect.Left + (Rect.Right - Rect.Left - FButtonPicture.Width) div 2;
-    y := Rect.Top + (Rect.Bottom - Rect.Top - FButtonPicture.Height) div 2;
-    Canvas.Draw(x, y, FButtonPicture.Graphic);
+    x := Rect.Left + (Rect.Right - Rect.Left - FButtonPicture.Picture.Width) div 2;
+    y := Rect.Top + (Rect.Bottom - Rect.Top - FButtonPicture.Picture.Height) div 2;
+    Canvas.Draw(x, y, FButtonPicture.Picture.Graphic);
   end;
 end;
 
-procedure TFsCombobox.SetButtonPicture(const Value: TPicture);
+procedure TFsCombobox.SetButtonPicture(const Value: TFsPicture);
 begin
   FButtonPicture.Assign(Value);
 end;

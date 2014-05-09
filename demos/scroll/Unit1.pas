@@ -27,6 +27,7 @@ type
     Edit2: TEdit;
     Button1: TButton;
     Edit3: TEdit;
+    FsImageButton1: TFsImageButton;
     procedure FormCreate(Sender: TObject);
   public
     procedure InitListView;

@@ -125,9 +125,10 @@ type
 
   TFsCustomButtonEdit = class(TFsCustomEdit)
   private
-    FButtonPicture: TPicture;
+    FButtonPicture: TFsPicture;
     FSpace: Integer;
-    procedure SetButtonPicture(const Value: TPicture);
+    procedure PictureChanged(Sender: TObject);
+    procedure SetButtonPicture(const Value: TFsPicture);
     procedure SetSpace(const Value: Integer);
   protected
     FNCCanvas: TCanvas;
@@ -139,7 +140,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    property ButtonPicture: TPicture read FButtonPicture write SetButtonPicture;
+    property ButtonPicture: TFsPicture read FButtonPicture write SetButtonPicture;
     property Space: Integer read FSpace write SetSpace;
   end;
 
@@ -448,7 +449,8 @@ end;
 constructor TFsCustomButtonEdit.Create(AOwner: TComponent);
 begin
   inherited;
-  FButtonPicture := TPicture.Create;
+  FButtonPicture := TFsPicture.Create;
+  FButtonPicture.OnChange := Self.PictureChanged;
   FNCCanvas := TCanvas.Create;
 end;
 
@@ -457,6 +459,11 @@ begin
   FButtonPicture.Free;
   FNCCanvas.Free;
   inherited;
+end;
+
+procedure TFsCustomButtonEdit.PictureChanged(Sender: TObject);
+begin
+  Self.NCChanged;  
 end;
 
 procedure TFsCustomButtonEdit.SetSpace(const Value: Integer);
@@ -476,7 +483,7 @@ begin
 
   pr := @msgr.CalcSize_Params.rgrc[0];
 
-  if Assigned(FButtonPicture.Graphic) and not FButtonPicture.Graphic.Empty then
+  if FButtonPicture.Width > 0 then
     Dec(pr.Right, FButtonPicture.Width + FSpace);
 
   msgr.Result := 0;
@@ -522,7 +529,7 @@ var
 begin
   inherited;
 
-  if Assigned(FButtonPicture.Graphic) and not FButtonPicture.Graphic.Empty then
+  if FButtonPicture.Width > 0 then
   begin
     r.Left := Self.Width - BorderWidth - FSpace - FButtonPicture.Width;
     r.Right := Self.Width - BorderWidth;
@@ -538,7 +545,7 @@ begin
       FNCCanvas.Brush.Color := Self.Color;
       FNCCanvas.FillRect(Rect(r.Left, BorderWidth, r.Right, Self.Height - BorderWidth));
 
-      FNCCanvas.Draw(r.Left + FSpace shr 1, r.Top, FButtonPicture.Graphic);
+      FNCCanvas.Draw(r.Left + FSpace shr 1, r.Top, FButtonPicture.Picture.Graphic);
 
       msgr.Result := 0;
     finally
@@ -548,10 +555,9 @@ begin
   end;
 end;
 
-procedure TFsCustomButtonEdit.SetButtonPicture(const Value: TPicture);
+procedure TFsCustomButtonEdit.SetButtonPicture(const Value: TFsPicture);
 begin
   FButtonPicture.Assign(Value);
-  Self.NCChanged;
 end;
 
 { TFsButtonEdit }
