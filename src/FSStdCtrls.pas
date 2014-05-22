@@ -4,7 +4,7 @@ interface
 
 uses
   SysUtils, Classes, Consts, Windows, Graphics, Controls, Messages, StdCtrls, ExtCtrls, ComCtrls,
-  Forms, FSVclBase, FSGraphics, FSControls, FSScrollControls, Themes;
+  Forms, Themes, Menus, FSVclBase, FSGraphics, FSControls, FSScrollControls;
 
 type
   TFsImage = class(TFsGraphicControl)
@@ -362,6 +362,9 @@ type
     procedure SetTip(const Value: string);
     procedure SetTipFont(const Value: TFont);
     procedure SetButtonWidth(const Value: Integer);
+    function GetText: string;
+    procedure SetText(const Value: string);
+    function ShouldStoreText: Boolean;
   protected
     procedure Loaded; override;
     procedure DoEnter; override;
@@ -386,6 +389,7 @@ type
     property ShowTip: Boolean read FShowTip write SetShowTip;
     property Tip: string read FTip write SetTip;
     property TipFont: TFont read FTipFont write SetTipFont;
+    property Text: string read GetText write SetText stored ShouldStoreText;
     property TextFont: TFont read FTextFont write SetTextFont;
   public
     constructor Create(AOwner: TComponent); override;
@@ -2067,6 +2071,12 @@ begin
   if not handled then inherited;
 end;
 
+function TFsCustomCombobox.GetText: string;
+begin
+  if FShowingTip then Result := ''
+  else Result := inherited Text;
+end;
+
 procedure TFsCustomCombobox.Loaded;
 begin
   inherited;
@@ -2090,7 +2100,8 @@ end;
 procedure TFsCustomCombobox.Paint;
 var
   bgc: TColor;
-  r: TRect;
+  r, r1: TRect;
+  _text: string;
 begin
   FMouseInControlLastPaint := MouseInControl;
 
@@ -2101,7 +2112,6 @@ begin
   r.Top := 0;
   r.Right := Self.Width;
   r.Bottom := Self.Height;
-
 
   FCanvas.Brush.Color := Self.Color;
 
@@ -2115,6 +2125,17 @@ begin
     FCanvas.Pen.Style := psSolid;
 
     FCanvas.Rectangle(r);
+
+    r1.Left := 2;
+    r1.Right := r.Right - FButtonWidth;
+    r1.Top := 1;
+    r1.Bottom := Self.ClientHeight - 1;
+
+    FCanvas.Font := Self.Font;
+
+    _text := Self.Text;
+
+    FCanvas.TextRect(r1, _text, [tfSingleLine, tfVerticalCenter]);
   end
   else begin
     FCanvas.Brush.Color := bgc;
@@ -2182,21 +2203,21 @@ end;
 
 procedure TFsCustomCombobox.SetShowingTip(const Value: Boolean);
 begin
-  if FShowTip then
+  if FShowingTip <> Value then
   begin
-    if FShowingTip <> Value then
-    begin
-      FShowingTip := Value;
+    FShowingTip := Value;
 
-      if ShowingTip then
+    if ShowingTip then
+    begin
+      if FShowTip then
       begin
-        Text := FTip;
+        inherited Text := FTip;
         Font.Assign(FTipFont);
-      end
-      else begin
-        Text := '';
-        Font.Assign(FTextFont);
       end;
+    end
+    else begin
+      inherited Text := '';
+      Font.Assign(FTextFont);
     end;
   end;
 end;
@@ -2218,6 +2239,13 @@ begin
   end;
 end;
 
+procedure TFsCustomCombobox.SetText(const Value: string);
+begin
+  ShowingTip := Value = '';
+
+  if not FShowingTip then inherited Text := Value;
+end;
+
 procedure TFsCustomCombobox.SetTextFont(const Value: TFont);
 begin
   FTextFont.Assign(Value);
@@ -2226,12 +2254,17 @@ end;
 procedure TFsCustomCombobox.SetTip(const Value: string);
 begin
   FTip := Value;
-  if FShowingTip then Self.Text := FTip;
+  if FShowingTip then inherited Text := FTip;
 end;
 
 procedure TFsCustomCombobox.SetTipFont(const Value: TFont);
 begin
   FTipFont.Assign(Value);
+end;
+
+function TFsCustomCombobox.ShouldStoreText: Boolean;
+begin
+  Result := not FShowingTip;
 end;
 
 procedure TFsCustomCombobox.TextFontChanged(Sender: TObject);

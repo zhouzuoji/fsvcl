@@ -18,7 +18,7 @@ type
     FTextFont: TFont;
     FShowingTip: Boolean;
     FShowTip: Boolean;
-    FOriginPasswordChar: Char; 
+    FOriginPasswordChar: Char;
     procedure TipFontChanged(Sender: TObject);
     procedure TextFontChanged(Sender: TObject);
     procedure SetTip(const Value: string);
@@ -30,12 +30,15 @@ type
     procedure SetBorderWidth(const Value: Integer);
     procedure SetNumberOnly(const Value: Boolean);
     procedure SetShowTip(const Value: Boolean);
+    function GetText: string;
+    procedure SetText(const Value: string);
   protected
     FMouseIn: Boolean;
     procedure NCChanged;
     procedure Loaded; override;
     procedure DoEnter; override;
     procedure DoExit; override;
+    function ShouldStoreText: Boolean;
     procedure CreateParams(var Params: TCreateParams); override;
     procedure CMMouseEnter(var msgr: TMessage); message CM_MOUSEENTER;
     procedure CMMouseLeave(var msgr: TMessage); message CM_MOUSELEAVE;
@@ -48,6 +51,7 @@ type
     property ShowTip: Boolean read FShowTip write SetShowTip;
     property Tip: string read FTip write SetTip;
     property TipFont: TFont read FTipFont write SetTipFont;
+    property Text: string read GetText write SetText stored ShouldStoreText;
     property TextFont: TFont read FTextFont write SetTextFont;
   public
     constructor Create(AOwner: TComponent); override;
@@ -57,10 +61,10 @@ type
 
   TFsEdit = class(TFsCustomEdit)
   published
-    property ShowTip;
-    property Tip;
     property TipFont;
     property TextFont;
+    property ShowTip;
+    property Tip;
     property BorderColor;
     property BorderColorHover;
     property NumberOnly;
@@ -97,8 +101,8 @@ type
     property ReadOnly;
     property ShowHint;
     property TabOrder;
-    property TabStop;
     property Text;
+    property TabStop;
     property Visible;
     property OnChange;
     property OnClick;
@@ -263,36 +267,39 @@ begin
   inherited;
 end;
 
+function TFsCustomEdit.GetText: string;
+begin
+  if FShowingTip then Result := ''
+  else Result := inherited Text;
+end;
+
 procedure TFsCustomEdit.Loaded;
 begin
   inherited;
 
-  if not (csDesigning in ComponentState) then
-  begin
-    SetShowingTip(Text = '');
-  end;
+  SetShowingTip(Text = '');
 end;
 
 procedure TFsCustomEdit.SetShowingTip(const Value: Boolean);
 begin
-  if FShowTip then
+  if FShowingTip <> Value then
   begin
-    if FShowingTip <> Value then
-    begin
-      FShowingTip := Value;
+    FShowingTip := Value;
 
-      if ShowingTip then
+    if FShowingTip then
+    begin
+      if FShowTip then
       begin
         FOriginPasswordChar := PasswordChar;
         PasswordChar := #0;
-        Text := FTip;
+        inherited Text := FTip;
         Font.Assign(FTipFont);
-      end
-      else begin
-        PasswordChar := FOriginPasswordChar;
-        Text := '';
-        Font.Assign(FTextFont);
       end;
+    end
+    else begin
+      PasswordChar := FOriginPasswordChar;
+      inherited Text := '';
+      Font.Assign(FTextFont);
     end;
   end;
 end;
@@ -305,13 +312,17 @@ begin
 
     if not (csLoading in ComponentState) then
     begin
-      if ShowTip then
-      begin
-        if Text = '' then  SetShowingTip(True);
-      end
-      else SetShowingTip(False);
+      if not Value then SetShowingTip(False)
+      else if Text = '' then SetShowingTip(True);
     end;
   end;
+end;
+
+procedure TFsCustomEdit.SetText(const Value: string);
+begin
+  ShowingTip := Value = '';
+
+  if not FShowingTip then inherited Text := Value;
 end;
 
 procedure TFsCustomEdit.SetTextFont(const Value: TFont);
@@ -322,12 +333,17 @@ end;
 procedure TFsCustomEdit.SetTip(const Value: string);
 begin
   FTip := Value;
-  if FShowingTip then Self.Text := FTip;
+  if FShowingTip then inherited Text := FTip;
 end;
 
 procedure TFsCustomEdit.SetTipFont(const Value: TFont);
 begin
   FTipFont.Assign(Value);
+end;
+
+function TFsCustomEdit.ShouldStoreText: Boolean;
+begin
+  Result := not FShowingTip;
 end;
 
 procedure TFsCustomEdit.TextFontChanged(Sender: TObject);
