@@ -9,7 +9,7 @@ type
   TFsNavTree = class;
   TFsNavTreeNodes = class;
 
-  TFsNavTreeCatalog = class(TCollectionItem)
+  TFsNavTreeCategory = class(TCollectionItem)
   private
     FText: string;
     FNodes: TFsNavTreeNodes;
@@ -33,17 +33,17 @@ type
     property Height: Integer read FHeight write SetHeight;
   end;
 
-  TFsNavTreeCatalogs = class(TCollection)
+  TFsNavTreeCategorys = class(TCollection)
   private
     FTree: TFsNavTree;
-    function GetItem(Index: Integer): TFsNavTreeCatalog;
-    procedure SetItem(Index: Integer; const Value: TFsNavTreeCatalog);
+    function GetItem(Index: Integer): TFsNavTreeCategory;
+    procedure SetItem(Index: Integer; const Value: TFsNavTreeCategory);
   protected
     procedure Update(Item: TCollectionItem); override;
   public
     constructor Create(ATree: TFsNavTree);
     property Tree: TFsNavTree read FTree;
-    property Items[Index: Integer]: TFsNavTreeCatalog read GetItem write SetItem; default;
+    property Items[Index: Integer]: TFsNavTreeCategory read GetItem write SetItem; default;
   end;
 
   TFsNavTreeNode = class(TCollectionItem)
@@ -55,7 +55,7 @@ type
     procedure SetText(const Value: string);
     procedure SetChildNodes(const Value: TFsNavTreeNodes);
     procedure SetExpanded(const Value: Boolean);
-    function GetCatalog: TFsNavTreeCatalog;
+    function GetCategory: TFsNavTreeCategory;
     procedure SetHeight(const Value: Integer);
     function GetLevel: Integer;
   protected
@@ -69,23 +69,23 @@ type
     property Text: string read FText write SetText;
     property Expanded: Boolean read FExpanded write SetExpanded;
     property ChildNodes: TFsNavTreeNodes read FChildNodes write SetChildNodes;
-    property Catalog: TFsNavTreeCatalog read GetCatalog;
+    property Category: TFsNavTreeCategory read GetCategory;
     property Level: Integer read GetLevel;
   end;
 
   TFsNavTreeNodes = class(TCollection)
   private
-    FCatalog: TFsNavTreeCatalog;
+    FCategory: TFsNavTreeCategory;
     FParent: TFsNavTreeNode;
-    function GetCatalog: TFsNavTreeCatalog;
+    function GetCategory: TFsNavTreeCategory;
     function GetItem(Index: Integer): TFsNavTreeNode;
     procedure SetItem(Index: Integer; const Value: TFsNavTreeNode);
   protected
     procedure Update(Item: TCollectionItem); override;
   public
-    constructor Create(ACatalog: TFsNavTreeCatalog); reintroduce; overload;
+    constructor Create(ACategory: TFsNavTreeCategory); reintroduce; overload;
     constructor Create(AParent: TFsNavTreeNode); reintroduce; overload;
-    property Catalog: TFsNavTreeCatalog read GetCatalog;
+    property Category: TFsNavTreeCategory read GetCategory;
     property Parent: TFsNavTreeNode read FParent;
     property Items[Index: Integer]: TFsNavTreeNode read GetItem write SetItem; default;
   end;
@@ -97,7 +97,7 @@ type
   end;
   PFsNavTreeDrawInfo = ^TFsNavTreeDrawInfo;
 
-  TFsNavTreeHitTest = (htNone, htCatalogImage, htCatalogText, htNodeImage, htNodeText);
+  TFsNavTreeHitTest = (htNone, htCategoryImage, htCategoryText, htNodeImage, htNodeText);
 
   TFsNavTreeHitTestInfo = record
     ClientRect: TRect;
@@ -112,10 +112,10 @@ type
 
   TFsNavTree = class(TFsCustomControl)
   private
-    FCatalogs: TFsNavTreeCatalogs;
-    FCatalogImageOffset: Integer;
-    FCatalogTextOffset: Integer;
-    FCatalogFont: TFont;
+    FCategorys: TFsNavTreeCategorys;
+    FCategoryImageOffset: Integer;
+    FCategoryTextOffset: Integer;
+    FCategoryFont: TFont;
     FLeafImage: TFsPicture;
     FCollapsedImage: TFsPicture;
     FExpandedImage: TFsPicture;
@@ -126,17 +126,17 @@ type
     FHighlightNode: TFsNavTreeNode;
     function GetNodePictrue(node: TFsNavTreeNode): TFsPicture;
     function GetNodeImageRect(node: TFsNavTreeNode; const r: TRect): TRect;
-    function GetCatalogImageRect(catalog: TFsNavTreeCatalog; const r: TRect): TRect;
-    procedure SetCatalogs(const Value: TFsNavTreeCatalogs);
+    function GetCategoryImageRect(category: TFsNavTreeCategory; const r: TRect): TRect;
+    procedure SetCategorys(const Value: TFsNavTreeCategorys);
     function GetVisibleNodeTotalHeight(node: TFsNavTreeNode): Integer;
     function GetContentHeight: Integer;
     function DrawNode(node: TFsNavTreeNode; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
-    function DrawCatalog(catalog: TFsNavTreeCatalog; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
+    function DrawCategory(category: TFsNavTreeCategory; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
     function HitTestNode(X, Y: Integer; node: TFsNavTreeNode; var HitTestInfo: TFsNavTreeHitTestInfo): Boolean;
-    function HitTestCatalog(X, Y: Integer; catalog: TFsNavTreeCatalog; var HitTestInfo: TFsNavTreeHitTestInfo): Boolean;
-    procedure SetCatalogImageOffset(const Value: Integer);
-    procedure SetCatalogTextOffset(const Value: Integer);
-    procedure SetCatalogFont(const Value: TFont);
+    function HitTestCategory(X, Y: Integer; category: TFsNavTreeCategory; var HitTestInfo: TFsNavTreeHitTestInfo): Boolean;
+    procedure SetCategoryImageOffset(const Value: Integer);
+    procedure SetCategoryTextOffset(const Value: Integer);
+    procedure SetCategoryFont(const Value: TFont);
     procedure SetCollapsedImage(const Value: TFsPicture);
     procedure SetExpandedImage(const Value: TFsPicture);
     procedure SetLeafImage(const Value: TFsPicture);
@@ -174,10 +174,10 @@ type
     property ExpandedImage: TFsPicture read FExpandedImage write SetExpandedImage;
     property LeafImage: TFsPicture read FLeafImage write SetLeafImage;
     property NodeIndent: Integer read FNodeIndent write SetNodeIndent;
-    property Catalogs: TFsNavTreeCatalogs read FCatalogs write SetCatalogs;
-    property CatalogFont: TFont read FCatalogFont write SetCatalogFont;
-    property CatalogImageOffset: Integer read FCatalogImageOffset write SetCatalogImageOffset;
-    property CatalogTextOffset: Integer read FCatalogTextOffset write SetCatalogTextOffset;
+    property Categorys: TFsNavTreeCategorys read FCategorys write SetCategorys;
+    property CategoryFont: TFont read FCategoryFont write SetCategoryFont;
+    property CategoryImageOffset: Integer read FCategoryImageOffset write SetCategoryImageOffset;
+    property CategoryTextOffset: Integer read FCategoryTextOffset write SetCategoryTextOffset;
     property NodeTextOffset: Integer read FNodeTextOffset write SetNodeTextOffset;
     property MouseWheelMultiple;
     property OnClickNode: TNodeClickEvent read FOnClickNode write FOnClickNode;
@@ -192,22 +192,22 @@ begin
   inherited;
   Width := 250;
   Height := 360;
-  FCatalogImageOffset := 8;
-  FCatalogTextOffset := 10;
+  FCategoryImageOffset := 8;
+  FCategoryTextOffset := 10;
   FNodeTextOffset := 5;
   FNodeIndent := 4;
   FHighlightColor := RGB(141, 203, 241);
-  FCatalogFont := TFont.Create;
+  FCategoryFont := TFont.Create;
   FCollapsedImage := TFsPicture.Create;
   FExpandedImage := TFsPicture.Create;
   FLeafImage := TFsPicture.Create;
-  FCatalogs := TFsNavTreeCatalogs.Create(Self);
+  FCategorys := TFsNavTreeCategorys.Create(Self);
 end;
 
 destructor TFsNavTree.Destroy;
 begin
-  FCatalogs.Free;
-  FCatalogFont.Free;
+  FCategorys.Free;
+  FCategoryFont.Free;
   FCollapsedImage.Free;
   FExpandedImage.Free;
   FLeafImage.Free;
@@ -230,39 +230,39 @@ begin
     FOnClickNode(Self, node);
 end;
 
-function TFsNavTree.DrawCatalog(catalog: TFsNavTreeCatalog; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
+function TFsNavTree.DrawCategory(category: TFsNavTreeCategory; var DrawInfo: TFsNavTreeDrawInfo): Boolean;
 var
   r: TRect;
   i: Integer;
 begin
   r.Top := DrawInfo.ClientRect.Top + DrawInfo.CurrentOffsetY - DrawInfo.OffsetY;
   
-  Inc(DrawInfo.CurrentOffsetY, catalog.Height);
+  Inc(DrawInfo.CurrentOffsetY, category.Height);
 
   Result := DrawInfo.CurrentOffsetY < DrawInfo.OffsetY + DrawInfo.ClientRect.Bottom - DrawInfo.ClientRect.Top;
 
   if DrawInfo.CurrentOffsetY > DrawInfo.OffsetY then
   begin
-    r.Left := DrawInfo.ClientRect.Left + FCatalogImageOffset;
+    r.Left := DrawInfo.ClientRect.Left + FCategoryImageOffset;
     r.Right := DrawInfo.ClientRect.Right;
     r.Bottom := DrawInfo.ClientRect.Top + DrawInfo.CurrentOffsetY - DrawInfo.OffsetY;
 
-    if catalog.Image.Width > 0 then
+    if category.Image.Width > 0 then
     begin
-      Canvas.Draw(r.Left, r.Top + (catalog.Height - catalog.Image.Height) div 2, catalog.Image.Picture.Graphic);
-      Inc(r.Left, FCatalogTextOffset + catalog.Image.Width);
+      Canvas.Draw(r.Left, r.Top + (category.Height - category.Image.Height) div 2, category.Image.Picture.Graphic);
+      Inc(r.Left, FCategoryTextOffset + category.Image.Width);
     end;
 
-    Canvas.Font := FCatalogFont;
+    Canvas.Font := FCategoryFont;
     Windows.SetBkMode(Canvas.Handle, Windows.TRANSPARENT);
-    Canvas.TextRect(r, catalog.FText, [tfSingleLine, tfVerticalCenter, tfEndEllipsis]);
+    Canvas.TextRect(r, category.FText, [tfSingleLine, tfVerticalCenter, tfEndEllipsis]);
   end;
 
   if Result then
   begin
-    for i := 0 to catalog.Nodes.Count - 1 do
+    for i := 0 to category.Nodes.Count - 1 do
     begin
-      if not Self.DrawNode(catalog.Nodes[i], DrawInfo) then
+      if not Self.DrawNode(category.Nodes[i], DrawInfo) then
       begin
         Result := False;
         Break;
@@ -285,7 +285,7 @@ begin
 
   if DrawInfo.CurrentOffsetY > DrawInfo.OffsetY then
   begin
-    r.Left := DrawInfo.ClientRect.Left + FCatalogImageOffset + (node.Level + 1) * FNodeIndent;
+    r.Left := DrawInfo.ClientRect.Left + FCategoryImageOffset + (node.Level + 1) * FNodeIndent;
     r.Right := DrawInfo.ClientRect.Right;
     r.Bottom := DrawInfo.ClientRect.Top + DrawInfo.CurrentOffsetY - DrawInfo.OffsetY;
 
@@ -323,12 +323,12 @@ begin
   end;
 end;
 
-function TFsNavTree.GetCatalogImageRect(catalog: TFsNavTreeCatalog; const r: TRect): TRect;
+function TFsNavTree.GetCategoryImageRect(category: TFsNavTreeCategory; const r: TRect): TRect;
 begin
-  Result.Top :=  r.Top + (catalog.Height - catalog.Image.Height) div 2;
-  Result.Bottom := Result.Bottom + catalog.Image.Height;
-  Result.Left := r.Left + FCatalogImageOffset;
-  Result.Right := Result.Left + catalog.Image.Width;
+  Result.Top :=  r.Top + (category.Height - category.Image.Height) div 2;
+  Result.Bottom := Result.Bottom + category.Image.Height;
+  Result.Left := r.Left + FCategoryImageOffset;
+  Result.Right := Result.Left + category.Image.Width;
 end;
 
 function TFsNavTree.GetContentHeight: Integer;
@@ -337,12 +337,12 @@ var
 begin
   Result := 0;
   
-  for i := 0 to FCatalogs.Count - 1 do
+  for i := 0 to FCategorys.Count - 1 do
   begin
-    Inc(Result, FCatalogs[i].Height);
+    Inc(Result, FCategorys[i].Height);
 
-    for j := 0 to FCatalogs[i].Nodes.Count - 1 do
-      Inc(Result, GetVisibleNodeTotalHeight(FCatalogs[i].Nodes[j]));
+    for j := 0 to FCategorys[i].Nodes.Count - 1 do
+      Inc(Result, GetVisibleNodeTotalHeight(FCategorys[i].Nodes[j]));
   end;
 end;
 
@@ -353,7 +353,7 @@ begin
   pic := GetNodePictrue(node);
   Result.Top :=  r.Top + (node.Height - pic.Height) div 2;
   Result.Bottom := Result.Bottom + pic.Height;
-  Result.Left := r.Left + FCatalogImageOffset + (node.Level + 1) * FNodeIndent;
+  Result.Left := r.Left + FCategoryImageOffset + (node.Level + 1) * FNodeIndent;
   Result.Right := Result.Left + pic.Width;
 end;
 
@@ -397,8 +397,8 @@ begin
   if NeedScroll(si) then HitTestInfo.OffsetY := si.nPos
   else HitTestInfo.OffsetY := 0;
 
-  for i := 0 to FCatalogs.Count - 1 do
-    if not Self.HitTestCatalog(X, Y, Catalogs[i], HitTestInfo) then
+  for i := 0 to FCategorys.Count - 1 do
+    if not Self.HitTestCategory(X, Y, Categorys[i], HitTestInfo) then
     begin
       Result := HitTestInfo.HitTest;
       CopyRect(area, HitTestInfo.area);
@@ -407,15 +407,15 @@ begin
     end;
 end;
 
-function TFsNavTree.HitTestCatalog(X, Y: Integer; catalog: TFsNavTreeCatalog; var HitTestInfo: TFsNavTreeHitTestInfo): Boolean;
+function TFsNavTree.HitTestCategory(X, Y: Integer; category: TFsNavTreeCategory; var HitTestInfo: TFsNavTreeHitTestInfo): Boolean;
 var
   i, t, b: Integer;
 begin
   Result := True;
 
   t := HitTestInfo.ClientRect.Top + HitTestInfo.CurrentOffsetY - HitTestInfo.OffsetY;
-  b := t + catalog.Height;
-  Inc(HitTestInfo.CurrentOffsetY, catalog.Height);
+  b := t + category.Height;
+  Inc(HitTestInfo.CurrentOffsetY, category.Height);
 
   if (Y >= t) and (Y < b) then
   begin
@@ -423,19 +423,19 @@ begin
     HitTestInfo.area.Bottom := b;
     HitTestInfo.area.Left := HitTestInfo.ClientRect.Left;
     HitTestInfo.area.Right := HitTestInfo.ClientRect.Right;
-    HitTestInfo.obj := catalog;
+    HitTestInfo.obj := category;
 
-    if PtInRect(GetCatalogImageRect(catalog, HitTestInfo.area), Point(X, Y)) then
-      HitTestInfo.HitTest := htCatalogImage
+    if PtInRect(GetCategoryImageRect(category, HitTestInfo.area), Point(X, Y)) then
+      HitTestInfo.HitTest := htCategoryImage
     else
-      HitTestInfo.HitTest := htCatalogText;
+      HitTestInfo.HitTest := htCategoryText;
 
     Result := False;
     Exit;
   end;
 
-  for i := 0 to catalog.Nodes.Count - 1 do
-    if not Self.HitTestNode(X, Y, catalog.Nodes[i], HitTestInfo) then
+  for i := 0 to category.Nodes.Count - 1 do
+    if not Self.HitTestNode(X, Y, category.Nodes[i], HitTestInfo) then
     begin
       Result := False;
       Break;
@@ -492,9 +492,9 @@ begin
     case htr of
       htNone: ;
 
-      htCatalogImage: ;
+      htCategoryImage: ;
 
-      htCatalogText: ;
+      htCategoryText: ;
 
       htNodeImage:
         if TFsNavTreeNode(obj).ChildNodes.Count > 0 then
@@ -522,8 +522,8 @@ begin
   if NeedScroll(si) then DrawInfo.OffsetY := si.nPos
   else DrawInfo.OffsetY := 0;
 
-  for i := 0 to FCatalogs.Count - 1 do
-    if not Self.DrawCatalog(FCatalogs[i], DrawInfo) then Break;
+  for i := 0 to FCategorys.Count - 1 do
+    if not Self.DrawCategory(FCategorys[i], DrawInfo) then Break;
 end;
 
 procedure TFsNavTree.Resize;
@@ -532,32 +532,32 @@ begin
   UpdateScrollRange;
 end;
 
-procedure TFsNavTree.SetCatalogFont(const Value: TFont);
+procedure TFsNavTree.SetCategoryFont(const Value: TFont);
 begin
-  FCatalogFont.Assign(Value);
+  FCategoryFont.Assign(Value);
   Self.Invalidate;
 end;
 
-procedure TFsNavTree.SetCatalogImageOffset(const Value: Integer);
+procedure TFsNavTree.SetCategoryImageOffset(const Value: Integer);
 begin
-  if (Value >= 0) and (FCatalogImageOffset <> Value) then
+  if (Value >= 0) and (FCategoryImageOffset <> Value) then
   begin
-    FCatalogImageOffset := Value;
+    FCategoryImageOffset := Value;
     Self.Invalidate;
   end;
 end;
 
-procedure TFsNavTree.SetCatalogs(const Value: TFsNavTreeCatalogs);
+procedure TFsNavTree.SetCategorys(const Value: TFsNavTreeCategorys);
 begin
-  if Assigned(Value) then FCatalogs.Assign(Value)
-  else FCatalogs.Clear;
+  if Assigned(Value) then FCategorys.Assign(Value)
+  else FCategorys.Clear;
 end;
 
-procedure TFsNavTree.SetCatalogTextOffset(const Value: Integer);
+procedure TFsNavTree.SetCategoryTextOffset(const Value: Integer);
 begin
-  if (Value >= 0) and (FCatalogTextOffset <> Value) then
+  if (Value >= 0) and (FCategoryTextOffset <> Value) then
   begin
-    FCatalogTextOffset := Value;
+    FCategoryTextOffset := Value;
     Self.Invalidate;
   end;
 end;
@@ -642,9 +642,9 @@ begin
   inherited;
 end;
 
-function TFsNavTreeNode.GetCatalog: TFsNavTreeCatalog;
+function TFsNavTreeNode.GetCategory: TFsNavTreeCategory;
 begin
-  if Assigned(Collection) then Result := TFsNavTreeNodes(Collection).Catalog
+  if Assigned(Collection) then Result := TFsNavTreeNodes(Collection).Category
   else Result := nil;
 end;
 
@@ -708,16 +708,16 @@ begin
   FParent := AParent;
 end;
 
-constructor TFsNavTreeNodes.Create(ACatalog: TFsNavTreeCatalog);
+constructor TFsNavTreeNodes.Create(ACategory: TFsNavTreeCategory);
 begin
   inherited Create(TFsNavTreeNode);
-  FCatalog := ACatalog;
+  FCategory := ACategory;
 end;
 
-function TFsNavTreeNodes.GetCatalog: TFsNavTreeCatalog;
+function TFsNavTreeNodes.GetCategory: TFsNavTreeCategory;
 begin
-  if Assigned(FCatalog) then Result := FCatalog
-  else if Assigned(FParent) then Result := FParent.Catalog
+  if Assigned(FCategory) then Result := FCategory
+  else if Assigned(FParent) then Result := FParent.Category
   else Result := nil;
 end;
 
@@ -733,32 +733,32 @@ end;
 
 procedure TFsNavTreeNodes.Update(Item: TCollectionItem);
 var
-  lCatalog: TFsNavTreeCatalog;
+  lCategory: TFsNavTreeCategory;
 begin
   inherited;
 
-  lCatalog := Self.Catalog;
+  lCategory := Self.Category;
 
-  if Assigned(lCatalog) then lCatalog.Changed(False);
+  if Assigned(lCategory) then lCategory.Changed(False);
 end;
 
-{ TFsNavTreeCatalog }
+{ TFsNavTreeCategory }
 
-procedure TFsNavTreeCatalog.Assign(Source: TPersistent);
+procedure TFsNavTreeCategory.Assign(Source: TPersistent);
 begin
   inherited;
 
-  if Source is TFsNavTreeCatalog then
+  if Source is TFsNavTreeCategory then
   begin
-    Self.FHeight := TFsNavTreeCatalog(Source).Height;
-    Self.FText := TFsNavTreeCatalog(Source).Text;
-    FNodes.Assign(TFsNavTreeCatalog(Source).Nodes);
-    FImage.Assign(TFsNavTreeCatalog(Source).FImage);
+    Self.FHeight := TFsNavTreeCategory(Source).Height;
+    Self.FText := TFsNavTreeCategory(Source).Text;
+    FNodes.Assign(TFsNavTreeCategory(Source).Nodes);
+    FImage.Assign(TFsNavTreeCategory(Source).FImage);
   end
   else inherited;
 end;
 
-constructor TFsNavTreeCatalog.Create(Collection: TCollection);
+constructor TFsNavTreeCategory.Create(Collection: TCollection);
 begin
   inherited;
   FHeight := 32;
@@ -767,24 +767,24 @@ begin
   FNodes := TFsNavTreeNodes.Create(Self);
 end;
 
-destructor TFsNavTreeCatalog.Destroy;
+destructor TFsNavTreeCategory.Destroy;
 begin
   FNodes.Free;
   FImage.Free;
   inherited;
 end;
 
-function TFsNavTreeCatalog.GetDisplayName: string;
+function TFsNavTreeCategory.GetDisplayName: string;
 begin
   Result := FText;
 end;
 
-procedure TFsNavTreeCatalog.ImageChanged(Sender: TObject);
+procedure TFsNavTreeCategory.ImageChanged(Sender: TObject);
 begin
 
 end;
 
-procedure TFsNavTreeCatalog.SetHeight(const Value: Integer);
+procedure TFsNavTreeCategory.SetHeight(const Value: Integer);
 begin
   if FHeight <> Value then
   begin
@@ -793,17 +793,17 @@ begin
   end;
 end;
 
-procedure TFsNavTreeCatalog.SetImage(const Value: TFsPicture);
+procedure TFsNavTreeCategory.SetImage(const Value: TFsPicture);
 begin
   FImage.Assign(Value);
 end;
 
-procedure TFsNavTreeCatalog.SetNodes(const Value: TFsNavTreeNodes);
+procedure TFsNavTreeCategory.SetNodes(const Value: TFsNavTreeNodes);
 begin
   FNodes.Assign(Value);
 end;
 
-procedure TFsNavTreeCatalog.SetText(const Value: string);
+procedure TFsNavTreeCategory.SetText(const Value: string);
 begin
   if FText <> Value then
   begin
@@ -812,25 +812,25 @@ begin
   end;
 end;
 
-{ TFsNavTreeCatalogs }
+{ TFsNavTreeCategorys }
 
-constructor TFsNavTreeCatalogs.Create(ATree: TFsNavTree);
+constructor TFsNavTreeCategorys.Create(ATree: TFsNavTree);
 begin
-  inherited Create(TFsNavTreeCatalog);
+  inherited Create(TFsNavTreeCategory);
   FTree := ATree;
 end;
 
-function TFsNavTreeCatalogs.GetItem(Index: Integer): TFsNavTreeCatalog;
+function TFsNavTreeCategorys.GetItem(Index: Integer): TFsNavTreeCategory;
 begin
-  Result := TFsNavTreeCatalog(inherited Items[Index]);
+  Result := TFsNavTreeCategory(inherited Items[Index]);
 end;
 
-procedure TFsNavTreeCatalogs.SetItem(Index: Integer; const Value: TFsNavTreeCatalog);
+procedure TFsNavTreeCategorys.SetItem(Index: Integer; const Value: TFsNavTreeCategory);
 begin
   inherited Items[Index] := Value;
 end;
 
-procedure TFsNavTreeCatalogs.Update(Item: TCollectionItem);
+procedure TFsNavTreeCategorys.Update(Item: TCollectionItem);
 begin
   inherited;
 
